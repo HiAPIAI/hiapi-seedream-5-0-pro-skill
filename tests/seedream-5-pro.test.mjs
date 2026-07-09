@@ -90,6 +90,14 @@ test("validates models, aliases, and reference image rules", () => {
   );
 });
 
+test("passes storage tier through to the task payload", () => {
+  const payload = buildImagePayload({ prompt: "draw", storage: "persistent" });
+  assert.equal(payload.storage, "persistent");
+  const noStorage = buildImagePayload({ prompt: "draw" });
+  assert.equal("storage" in noStorage, false);
+  assert.throws(() => buildImagePayload({ prompt: "draw", storage: "forever" }), /Unsupported storage tier/);
+});
+
 test("accepts the documented aspect ratio sets per model", () => {
   for (const ratio of ["1:1", "4:3", "3:4", "16:9", "9:16", "3:2", "2:3", "21:9"]) {
     assert.equal(normalizeAspectRatio(ratio, "t2i"), ratio);

@@ -31,6 +31,8 @@ function parseArgs(argv) {
       options.resolution = argv[++i];
     } else if (arg === "--output-format" || arg === "--format") {
       options.outputFormat = argv[++i];
+    } else if (arg === "--storage") {
+      options.storage = argv[++i];
     } else if (arg === "--input-url" || arg === "--input-urls" || arg === "--image-url" || arg === "--image-urls") {
       if (!options.inputUrls) options.inputUrls = [];
       options.inputUrls.push(argv[++i]);
@@ -67,6 +69,9 @@ Options:
                         i2i adds match_input_image (default) to follow the first reference image.
       --resolution      1K (~2 MP) or 2K (~4 MP, up to 2048x2048). Default: 2K
       --output-format   png (default) or jpeg.
+      --storage         temp (default, link expires in ~7 days) or persistent
+                        (long-term output storage, billed by size; requires the
+                        Output Storage feature on your account).
       --input-url       Repeatable, or comma separated. Required 1-10 times for i2i.
                         JPG/PNG/WebP reference images; SVG is not supported.
   -o, --output-dir      Directory for generated image files. Default: outputs
@@ -96,6 +101,7 @@ async function main() {
     resolution: options.resolution,
     outputFormat: options.outputFormat,
     inputUrls: options.inputUrls,
+    storage: options.storage,
   });
 
   const created = await createImageTask(payload, { config });

@@ -40,6 +40,7 @@ Parameters:
 - `--resolution`: `1K` (~2 MP, cheaper, fast iteration) or `2K` (~4 MP, default, final delivery). Billing is tiered by resolution.
 - `--output-format`: `png` (default) or `jpeg`.
 - Prompt up to 4000 characters. Spell out any in-image text verbatim; the model keeps glyphs accurate.
+- `--storage`: `temp` (default; output link expires in ~7 days) or `persistent` (long-term Output Storage, billed by size). The CLI also downloads results to `outputs/` either way.
 
 ## Edit Images (image-to-image)
 

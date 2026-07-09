@@ -76,5 +76,6 @@ Image-to-image:
 | `input.aspect_ratio` | yes | t2i: `1:1`, `4:3`, `3:4`, `16:9`, `9:16`, `3:2`, `2:3`, `21:9`. i2i adds `match_input_image` to follow the first reference image. |
 | `input.resolution` | yes | `1K` (~2 MP) or `2K` (~4 MP, up to 2048x2048). Billed per image by tier. |
 | `input.output_format` | no | `png` (default) or `jpeg`. |
+| `storage` (top-level) | no | `temp` (default, ~7 days) or `persistent` (long-term, billed by size). Insufficient balance silently downgrades to temp; the task detail reflects the actual tier. |
 
 Text-to-image does not accept `image_urls`. Image-to-image requires it, and the CLI validates the 1-10 limit and SVG rejection before sending the task.

@@ -23,6 +23,7 @@ export const SUPPORTED_ASPECT_RATIOS = new Set(BASE_ASPECT_RATIOS);
 export const SUPPORTED_I2I_ASPECT_RATIOS = new Set(["match_input_image", ...BASE_ASPECT_RATIOS]);
 export const SUPPORTED_RESOLUTIONS = new Set(["1K", "2K"]);
 export const SUPPORTED_OUTPUT_FORMATS = new Set(["png", "jpeg"]);
+export const SUPPORTED_STORAGE_TIERS = new Set(["temp", "persistent"]);
 export const SUPPORTED_MODELS = new Set([MODEL, IMAGE_TO_IMAGE_MODEL]);
 export const IMAGE_TO_IMAGE_MODELS = new Set([IMAGE_TO_IMAGE_MODEL]);
 const MODEL_ALIASES = new Map([
@@ -74,6 +75,15 @@ export function normalizeOutputFormat(value = DEFAULT_OUTPUT_FORMAT) {
   return format;
 }
 
+export function normalizeStorage(value) {
+  if (value === undefined || value === null || value === "") return undefined;
+  const storage = String(value).trim().toLowerCase();
+  if (!SUPPORTED_STORAGE_TIERS.has(storage)) {
+    throw new Error(`Unsupported storage tier "${storage}". Supported values: temp (default, ~7 days), persistent (long-term, billed by size).`);
+  }
+  return storage;
+}
+
 export function normalizeInputUrls(value) {
   if (value === undefined || value === null || value === "") return [];
   const raw = Array.isArray(value) ? value : [value];
@@ -96,6 +106,7 @@ export function buildImagePayload({
   resolution = DEFAULT_RESOLUTION,
   outputFormat = DEFAULT_OUTPUT_FORMAT,
   inputUrls,
+  storage,
 } = {}) {
   const normalizedModel = normalizeModel(model);
   const normalizedPrompt = String(prompt || "").trim();
@@ -127,9 +138,11 @@ export function buildImagePayload({
     output_format: normalizedOutputFormat,
   };
 
+  const normalizedStorage = normalizeStorage(storage);
   return {
     model: normalizedModel,
     input,
+    ...(normalizedStorage ? { storage: normalizedStorage } : {}),
   };
 }
 

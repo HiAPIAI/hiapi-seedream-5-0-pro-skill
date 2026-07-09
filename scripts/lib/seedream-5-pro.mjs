@@ -531,7 +531,22 @@ export async function saveImageOutputs(outputs, { outputDir, now = new Date() })
 
   for (const output of outputs) {
     if (output.kind === "url") {
-      saved.push({ kind: "url", url: output.value });
+      // Task outputs are temporary URLs (expire in days) — download them locally
+      // so the promised outputs/ directory always holds the result. Fall back to
+      // the raw URL when the download fails.
+      try {
+        const response = await fetch(output.value);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const mimeType = response.headers.get("content-type")?.split(";")[0] || "image/png";
+        const extension = extensionForMimeType(mimeType) || path.extname(new URL(output.value).pathname) || ".png";
+        const fileName = `seedream-5-pro-${formatTimestamp(now)}-${index}${extension}`;
+        const filePath = path.resolve(outputDir, fileName);
+        await writeFile(filePath, Buffer.from(await response.arrayBuffer()));
+        saved.push({ kind: "file", path: filePath, mimeType, sourceUrl: output.value });
+        index += 1;
+      } catch {
+        saved.push({ kind: "url", url: output.value });
+      }
       continue;
     }
 

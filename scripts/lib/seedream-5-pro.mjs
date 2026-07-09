@@ -13,7 +13,7 @@ export const DEFAULT_RESOLUTION = "2K";
 export const DEFAULT_OUTPUT_FORMAT = "png";
 export const DEFAULT_OUTPUT_DIR = "outputs";
 export const POLL_INTERVAL_MS = 3000;
-export const POLL_TIMEOUT_MS = 180000;
+export const POLL_TIMEOUT_MS = 300000;
 export const HIAPI_HOME_URL = "https://www.hiapi.ai";
 export const HIAPI_API_KEYS_URL = "https://www.hiapi.ai/en/register";
 export const HIAPI_DASHBOARD_URL = "https://www.hiapi.ai/en/dashboard";
@@ -282,7 +282,7 @@ export async function waitForImage(taskId, { config = resolveConfig(), fetchImpl
     }
   }
 
-  throw new Error("Image generation timed out after 3 minutes. The task may still be running; try again later.");
+  throw new Error(`Image generation timed out after ${Math.round(Number(timeoutMs) / 60000)} minutes. The task may still be running — check it later with taskId ${taskId} via GET /v1/tasks/${taskId}.`);
 }
 
 export async function generateImage(options, config = resolveConfig()) {
@@ -548,7 +548,12 @@ export async function saveImageOutputs(outputs, { outputDir, now = new Date() })
       // so the promised outputs/ directory always holds the result. Fall back to
       // the raw URL when the download fails.
       try {
-        const response = await fetch(output.value);
+        let response = await fetch(output.value).catch(() => null);
+        if (!response || !response.ok) {
+          // Fresh outputs can lag CDN propagation for a moment — retry once.
+          await new Promise((resolve) => setTimeout(resolve, 2000));
+          response = await fetch(output.value);
+        }
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const mimeType = response.headers.get("content-type")?.split(";")[0] || "image/png";
         const extension = extensionForMimeType(mimeType) || path.extname(new URL(output.value).pathname) || ".png";
@@ -557,7 +562,8 @@ export async function saveImageOutputs(outputs, { outputDir, now = new Date() })
         await writeFile(filePath, Buffer.from(await response.arrayBuffer()));
         saved.push({ kind: "file", path: filePath, mimeType, sourceUrl: output.value });
         index += 1;
-      } catch {
+      } catch (err) {
+        if (process.env.SEEDREAM_DEBUG) console.error("[download-fallback]", err && err.message);
         saved.push({ kind: "url", url: output.value });
       }
       continue;

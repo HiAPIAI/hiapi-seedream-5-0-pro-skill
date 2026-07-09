@@ -1,0 +1,31 @@
+{
+  "name": "hiapi-seedream-5-0-pro-skill",
+  "version": "0.1.0",
+  "description": "HiAPI Seedream 5.0 Pro skill for agent image generation and editing.",
+  "license": "MIT",
+  "type": "module",
+  "homepage": "https://github.com/HiAPIAI/hiapi-seedream-5-0-pro-skill#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/HiAPIAI/hiapi-seedream-5-0-pro-skill.git"
+  },
+  "keywords": [
+    "hiapi",
+    "seedream-5-pro",
+    "skill",
+    "agent",
+    "image-generation",
+    "image-editing"
+  ],
+  "bin": {
+    "hiapi-seedream-5-0-pro-skill": "./scripts/install.mjs",
+    "hiapi-seedream-5-pro": "./scripts/hiapi-seedream-5-pro.mjs",
+    "hiapi-seedream-5-pro-check": "./scripts/check-config.mjs"
+  },
+  "scripts": {
+    "test": "node --test tests/*.test.mjs"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

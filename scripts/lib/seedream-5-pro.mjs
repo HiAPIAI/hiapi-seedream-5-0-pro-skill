@@ -4,12 +4,11 @@ import path from "node:path";
 export const MODEL = "seedream-5.0-pro/text-to-image";
 export const IMAGE_TO_IMAGE_MODEL = "seedream-5.0-pro/image-to-image";
 export const SKILL_ID = "hiapi-seedream-5-0-pro";
-export const SKILL_VERSION = "0.1.0";
+export const SKILL_VERSION = "0.2.0";
 export const DEFAULT_BASE_URL = "https://api.hiapi.ai";
 export const DEFAULT_SKILLS_MANIFEST_URL = "https://raw.githubusercontent.com/HiAPIAI/hiapi-skills/main/skills.json";
 export const DEFAULT_ASPECT_RATIO = "1:1";
-export const DEFAULT_I2I_ASPECT_RATIO = "match_input_image";
-export const DEFAULT_RESOLUTION = "2K";
+export const DEFAULT_QUALITY = "basic";
 export const DEFAULT_OUTPUT_FORMAT = "png";
 export const DEFAULT_OUTPUT_DIR = "outputs";
 export const POLL_INTERVAL_MS = 3000;
@@ -20,8 +19,7 @@ export const HIAPI_DASHBOARD_URL = "https://www.hiapi.ai/en/dashboard";
 export const HIAPI_PRICING_URL = "https://www.hiapi.ai/en/pricing";
 const BASE_ASPECT_RATIOS = ["1:1", "4:3", "3:4", "16:9", "9:16", "3:2", "2:3", "21:9"];
 export const SUPPORTED_ASPECT_RATIOS = new Set(BASE_ASPECT_RATIOS);
-export const SUPPORTED_I2I_ASPECT_RATIOS = new Set(["match_input_image", ...BASE_ASPECT_RATIOS]);
-export const SUPPORTED_RESOLUTIONS = new Set(["1K", "2K"]);
+export const SUPPORTED_QUALITIES = new Set(["basic", "high"]);
 export const SUPPORTED_OUTPUT_FORMATS = new Set(["png", "jpeg"]);
 export const SUPPORTED_STORAGE_TIERS = new Set(["temp", "persistent"]);
 export const SUPPORTED_MODELS = new Set([MODEL, IMAGE_TO_IMAGE_MODEL]);
@@ -35,6 +33,8 @@ const MODEL_ALIASES = new Map([
   ["edit", IMAGE_TO_IMAGE_MODEL],
 ]);
 export const MAX_INPUT_URLS = 10;
+export const MIN_PROMPT_LENGTH = 4;
+export const MAX_PROMPT_LENGTH = 5000;
 
 export function normalizeModel(value = MODEL) {
   const raw = String(value || MODEL).trim();
@@ -47,24 +47,21 @@ export function normalizeModel(value = MODEL) {
 
 export function normalizeAspectRatio(value, model = MODEL) {
   const normalizedModel = normalizeModel(model);
-  const isI2i = IMAGE_TO_IMAGE_MODELS.has(normalizedModel);
-  const fallback = isI2i ? DEFAULT_I2I_ASPECT_RATIO : DEFAULT_ASPECT_RATIO;
-  const normalized = String(value || fallback).trim();
-  const supported = isI2i ? SUPPORTED_I2I_ASPECT_RATIOS : SUPPORTED_ASPECT_RATIOS;
-  if (!supported.has(normalized)) {
+  const normalized = String(value || DEFAULT_ASPECT_RATIO).trim();
+  if (!SUPPORTED_ASPECT_RATIOS.has(normalized)) {
     throw new Error(
-      `Unsupported aspect ratio "${normalized}" for ${normalizedModel}. Supported values: ${Array.from(supported).join(", ")}`,
+      `Unsupported aspect ratio "${normalized}" for ${normalizedModel}. Supported values: ${Array.from(SUPPORTED_ASPECT_RATIOS).join(", ")}`,
     );
   }
   return normalized;
 }
 
-export function normalizeResolution(value = DEFAULT_RESOLUTION) {
-  const resolution = String(value || DEFAULT_RESOLUTION).trim().toUpperCase();
-  if (!SUPPORTED_RESOLUTIONS.has(resolution)) {
-    throw new Error(`Unsupported resolution "${resolution}". Supported values: 1K (~2 MP), 2K (~4 MP).`);
+export function normalizeQuality(value = DEFAULT_QUALITY) {
+  const quality = String(value || DEFAULT_QUALITY).trim().toLowerCase();
+  if (!SUPPORTED_QUALITIES.has(quality)) {
+    throw new Error(`Unsupported quality "${quality}". Supported values: basic (1K), high (2K).`);
   }
-  return resolution;
+  return quality;
 }
 
 export function normalizeOutputFormat(value = DEFAULT_OUTPUT_FORMAT) {
@@ -92,6 +89,9 @@ export function normalizeInputUrls(value) {
     .map((entry) => entry.trim())
     .filter(Boolean);
   for (const url of urls) {
+    if (!/^https?:\/\//i.test(url)) {
+      throw new Error(`Reference image URLs must use HTTP or HTTPS: ${url}`);
+    }
     if (/\.svg(\?|#|$)/i.test(url)) {
       throw new Error(`SVG reference images are not supported: ${url}`);
     }
@@ -99,22 +99,54 @@ export function normalizeInputUrls(value) {
   return urls;
 }
 
+export function normalizeCallback(value) {
+  if (value === undefined || value === null) return undefined;
+  if (typeof value !== "object" || Array.isArray(value)) {
+    throw new Error("Callback must be an object with url and optional when fields.");
+  }
+
+  const url = String(value.url || "").trim();
+  if (!url) {
+    throw new Error("callback.url is required when callback is provided.");
+  }
+
+  let parsed;
+  try {
+    parsed = new URL(url);
+  } catch {
+    throw new Error("callback.url must be a valid HTTPS URL.");
+  }
+  if (parsed.protocol !== "https:") {
+    throw new Error("callback.url must use HTTPS.");
+  }
+
+  const when = String(value.when || "final").trim().toLowerCase();
+  if (when !== "final") {
+    throw new Error('Unsupported callback.when. The only supported value is "final".');
+  }
+
+  return { url: parsed.toString(), when };
+}
+
 export function buildImagePayload({
   model = MODEL,
   prompt,
   aspectRatio,
-  resolution = DEFAULT_RESOLUTION,
+  quality = DEFAULT_QUALITY,
   outputFormat = DEFAULT_OUTPUT_FORMAT,
   inputUrls,
   storage,
+  callback,
+  callbackUrl,
+  callbackWhen,
 } = {}) {
   const normalizedModel = normalizeModel(model);
   const normalizedPrompt = String(prompt || "").trim();
-  if (!normalizedPrompt) {
-    throw new Error("A non-empty prompt is required.");
+  if (normalizedPrompt.length < MIN_PROMPT_LENGTH) {
+    throw new Error(`Prompt is too short (${normalizedPrompt.length} chars). Minimum is ${MIN_PROMPT_LENGTH} characters.`);
   }
-  if (normalizedPrompt.length > 4000) {
-    throw new Error(`Prompt is too long (${normalizedPrompt.length} chars). Maximum is 4000 characters.`);
+  if (normalizedPrompt.length > MAX_PROMPT_LENGTH) {
+    throw new Error(`Prompt is too long (${normalizedPrompt.length} chars). Maximum is ${MAX_PROMPT_LENGTH} characters.`);
   }
 
   const isI2i = IMAGE_TO_IMAGE_MODELS.has(normalizedModel);
@@ -127,22 +159,32 @@ export function buildImagePayload({
   }
 
   const normalizedAspectRatio = normalizeAspectRatio(aspectRatio, normalizedModel);
-  const normalizedResolution = normalizeResolution(resolution);
+  const normalizedQuality = normalizeQuality(quality);
   const normalizedOutputFormat = normalizeOutputFormat(outputFormat);
 
   const input = {
     prompt: normalizedPrompt,
     ...(isI2i ? { image_urls: normalizedInputUrls } : {}),
     aspect_ratio: normalizedAspectRatio,
-    resolution: normalizedResolution,
+    quality: normalizedQuality,
     output_format: normalizedOutputFormat,
   };
 
   const normalizedStorage = normalizeStorage(storage);
+  if (callback !== undefined && (callbackUrl !== undefined || callbackWhen !== undefined)) {
+    throw new Error("Pass callback or callbackUrl/callbackWhen, not both.");
+  }
+  const callbackInput = callback !== undefined
+    ? callback
+    : callbackUrl !== undefined || callbackWhen !== undefined
+      ? { url: callbackUrl, when: callbackWhen }
+      : undefined;
+  const normalizedCallback = normalizeCallback(callbackInput);
   return {
     model: normalizedModel,
     input,
     ...(normalizedStorage ? { storage: normalizedStorage } : {}),
+    ...(normalizedCallback ? { callback: normalizedCallback } : {}),
   };
 }
 
@@ -202,7 +244,7 @@ export function extractImageOutputs(response) {
 }
 
 export function extractTaskId(response) {
-  return response?.data?.taskId || response?.data?.id || response?.data?.task_id || response?.id || response?.task_id || "";
+  return response?.data?.taskId || response?.data?.id || response?.data?.task_id || response?.taskId || response?.id || response?.task_id || "";
 }
 
 export function getTaskStatus(response) {
@@ -272,7 +314,10 @@ export async function waitForImage(taskId, { config = resolveConfig(), fetchImpl
     if (status === "success" || status === "succeeded" || status === "completed") {
       const outputs = extractImageOutputs(response);
       if (outputs.length === 0) {
-        throw new Error("Image task succeeded but no image output was returned.");
+        const responseTaskId = extractTaskId(response) || taskId;
+        throw new Error(
+          `Image task succeeded but no image output was returned. Task ID: ${responseTaskId}. Response: ${summarizeTaskResponse(response)}`,
+        );
       }
       return { response, outputs };
     }
@@ -299,7 +344,7 @@ export async function generateImage(options, config = resolveConfig()) {
       taskId,
       status: "created",
       aspectRatio: payload.input.aspect_ratio,
-      resolution: payload.input.resolution,
+      quality: payload.input.quality,
       outputs: [],
     };
   }
@@ -321,7 +366,7 @@ export async function generateImage(options, config = resolveConfig()) {
     model: payload.model,
     taskId,
     aspectRatio: payload.input.aspect_ratio,
-    resolution: payload.input.resolution,
+    quality: payload.input.quality,
     outputs: savedOutputs,
     rawStatus: response,
   };
@@ -461,6 +506,14 @@ export function summarizeErrorBody(body) {
   return JSON.stringify(body).slice(0, 500);
 }
 
+export function summarizeTaskResponse(response, maxLength = 1000) {
+  try {
+    return JSON.stringify(response).slice(0, maxLength);
+  } catch {
+    return "[unserializable task response]";
+  }
+}
+
 function isUsefulFailureSummary(summary) {
   const normalized = String(summary || "").trim().toLowerCase();
   return normalized !== "" && normalized !== "unknown error" && normalized !== "success" && normalized !== "ok";
@@ -570,7 +623,7 @@ export async function saveImageOutputs(outputs, { outputDir, now = new Date() })
     }
 
     const extension = extensionForMimeType(output.mimeType);
-    const fileName = `${MODEL}-${formatTimestamp(now)}-${index}${extension}`;
+    const fileName = `seedream-5-pro-${formatTimestamp(now)}-${index}${extension}`;
     const filePath = path.resolve(outputDir, fileName);
     const base64 = output.value.replace(/^data:[^;]+;base64,/, "");
     await writeFile(filePath, Buffer.from(base64, "base64"));

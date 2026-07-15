@@ -27,6 +27,7 @@ import {
   normalizeAspectRatio,
   normalizeQuality,
   resolveConfig,
+  saveImageOutputs,
   SKILL_VERSION,
   waitForImage,
   warnOrRequireSkillUpdate,
@@ -213,6 +214,22 @@ test("extracts task ids and image outputs from task responses", () => {
       { kind: "data-uri", mimeType: "image/png", value: "data:image/png;base64,AAA" },
     ],
   );
+});
+
+test("saves data URI outputs without treating the model slash as a directory", async (t) => {
+  const outputDir = mkdtempSync(join(tmpdir(), "seedream-data-uri-"));
+  t.after(() => rmSync(outputDir, { recursive: true, force: true }));
+
+  const saved = await saveImageOutputs(
+    [{ kind: "data-uri", mimeType: "image/png", value: "data:image/png;base64,aGVsbG8=" }],
+    { outputDir, now: new Date("2026-07-15T00:00:00Z") },
+  );
+
+  assert.equal(saved.length, 1);
+  assert.equal(saved[0].kind, "file");
+  assert.equal(existsSync(saved[0].path), true);
+  assert.equal(readFileSync(saved[0].path, "utf8"), "hello");
+  assert.equal(saved[0].path.includes("seedream-5.0-pro/text-to-image"), false);
 });
 
 test("reports callback-shaped terminal failures and malformed successes", async () => {

@@ -623,7 +623,7 @@ export async function saveImageOutputs(outputs, { outputDir, now = new Date() })
     }
 
     const extension = extensionForMimeType(output.mimeType);
-    const fileName = `${MODEL}-${formatTimestamp(now)}-${index}${extension}`;
+    const fileName = `seedream-5-pro-${formatTimestamp(now)}-${index}${extension}`;
     const filePath = path.resolve(outputDir, fileName);
     const base64 = output.value.replace(/^data:[^;]+;base64,/, "");
     await writeFile(filePath, Buffer.from(base64, "base64"));

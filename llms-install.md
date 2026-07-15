@@ -27,17 +27,16 @@ Version `0.2.0` uses `quality: basic|high`. The former `resolution` field and `m
 npx -y github:HiAPIAI/hiapi-seedream-5-0-pro-skill -y
 ```
 
-The installer detects Codex and Claude Code, backs up an existing canonical or legacy installation under `~/.cache/hiapi-skill-backup/`, installs to `hiapi-seedream-5-0-pro`, preserves an existing `.env`, and asks the user to restart the agent.
+The installer detects Codex and Claude Code, backs up an existing canonical or legacy installation under `~/.cache/hiapi-skill-backup/`, installs to `hiapi-seedream-5-0-pro`, preserves an existing `.env`, and asks the user to restart the agent. The standalone CLI still requires `HIAPI_API_KEY` in its process environment; `.env` preservation prevents configuration loss for runtimes that load that file.
 
 ## Manual Codex Install
 
 ```bash
-git clone https://github.com/HiAPIAI/hiapi-seedream-5-0-pro-skill.git
 mkdir -p "${CODEX_HOME:-$HOME/.codex}/skills"
-cp -R hiapi-seedream-5-0-pro-skill "${CODEX_HOME:-$HOME/.codex}/skills/hiapi-seedream-5-0-pro"
+git clone https://github.com/HiAPIAI/hiapi-seedream-5-0-pro-skill.git "${CODEX_HOME:-$HOME/.codex}/skills/hiapi-seedream-5-0-pro"
 ```
 
-When manually upgrading, move the legacy `hiapi-seedream-5-pro` directory out of the skills folder first. The recommended installer handles this migration automatically.
+When manually upgrading, move both an existing `hiapi-seedream-5-0-pro` directory and the legacy `hiapi-seedream-5-pro` directory out of the skills folder first. The recommended installer handles migration, backup, and rollback automatically.
 
 ## Configure
 
@@ -84,7 +83,7 @@ Supported models are `seedream-5.0-pro/text-to-image` and `seedream-5.0-pro/imag
 2. Ensure `HIAPI_API_KEY` is configured.
 3. Run `scripts/hiapi-seedream-5-pro.mjs` with `--quality basic` or `--quality high`.
 4. Return real generated file paths or remote URLs only.
-5. For production services, prefer a final callback, verify its timestamp/HMAC signature against the raw body, reject stale timestamps, and make processing idempotent by `taskId`.
+5. For production services, prefer a final callback and make processing idempotent by `taskId`. If the user configured a Webhook signing key in HiAPI account settings, verify the timestamp/HMAC signature against the raw body and reject timestamps outside a 5-minute window; unsigned callbacks have no signature headers.
 6. On task failure, return the HTTP or task error and do not blindly retry an unchanged invalid request.
 7. For balance, credits, quota, or HTTP 402 errors, direct the user to https://www.hiapi.ai/en/dashboard.
 8. For HTTP 429, ask the user to wait or reduce concurrency.

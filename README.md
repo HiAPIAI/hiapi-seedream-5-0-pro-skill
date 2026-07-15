@@ -57,7 +57,7 @@ npx -y github:HiAPIAI/hiapi-seedream-5-0-pro-skill --target=/path   # custom dir
 AGENT_SKILLS_DIR=/path npx -y github:HiAPIAI/hiapi-seedream-5-0-pro-skill -y
 ```
 
-The script backs up an existing canonical or legacy installation under `~/.cache/hiapi-skill-backup/`, replaces it with the current version, preserves an existing `.env`, and reports whether `HIAPI_API_KEY` is set.
+The script backs up an existing canonical or legacy installation under `~/.cache/hiapi-skill-backup/`, replaces it with the current version, preserves an existing `.env`, and reports whether `HIAPI_API_KEY` is set. The standalone CLI reads `HIAPI_API_KEY` from its process environment; preserving `.env` prevents data loss for agent runtimes or wrappers that load it.
 
 ### OpenClaw
 
@@ -68,14 +68,13 @@ openclaw skills add https://github.com/HiAPIAI/hiapi-seedream-5-0-pro-skill
 ### Manual Install (Any Agent)
 
 ```bash
-git clone https://github.com/HiAPIAI/hiapi-seedream-5-0-pro-skill.git
 export AGENT_SKILLS_DIR="/path/to/your/agent/skills"
 mkdir -p "$AGENT_SKILLS_DIR"
-cp -R hiapi-seedream-5-0-pro-skill "$AGENT_SKILLS_DIR/hiapi-seedream-5-0-pro"
+git clone https://github.com/HiAPIAI/hiapi-seedream-5-0-pro-skill.git "$AGENT_SKILLS_DIR/hiapi-seedream-5-0-pro"
 ```
 
 Replace `AGENT_SKILLS_DIR` with your agent's skill directory.
-When manually upgrading from an early release, move the legacy `hiapi-seedream-5-pro` directory out of the skills folder first so the agent does not load duplicate copies. The recommended installer handles this migration automatically.
+When manually upgrading, move any existing `hiapi-seedream-5-0-pro` and legacy `hiapi-seedream-5-pro` directories out of the skills folder first. Cloning directly into the final path fails safely if a destination still exists; the recommended installer handles migration, backup, and rollback automatically.
 
 ### Agent Auto-Install Prompt
 
@@ -184,7 +183,7 @@ node scripts/hiapi-seedream-5-pro.mjs \
   --no-wait
 ```
 
-Both success and fail can trigger the final callback. Make your handler idempotent by `taskId`. Verify `X-HiAPI-Timestamp` and `X-HiAPI-Signature` against the raw body with the configured callback secret, use constant-time comparison, and reject stale timestamps. Use `GET /v1/tasks/:id` for local debugging or callback-failure recovery.
+Both success and fail can trigger the final callback. Make your handler idempotent by `taskId`. For signed callbacks, configure a 16-256 character Webhook signing key on the HiAPI account settings page; unsigned callbacks do not include signature headers. Verify `X-HiAPI-Timestamp` and `X-HiAPI-Signature` against the raw body, compare in constant time, and reject timestamps outside a 5-minute window. Use `GET /v1/tasks/:id` for local debugging or callback-failure recovery.
 
 ---
 

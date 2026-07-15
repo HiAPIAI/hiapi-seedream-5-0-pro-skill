@@ -6,7 +6,7 @@ Seedream 5.0 Pro tasks are asynchronous.
 
 1. Send `POST /v1/tasks` with top-level `callback.url` and `callback.when: "final"`.
 2. Store the returned `taskId` before returning control to the caller.
-3. Verify `X-HiAPI-Timestamp` and `X-HiAPI-Signature` against the raw body using `hex(HMAC-SHA256(secret, timestamp + "." + rawBody))`; compare in constant time and reject stale timestamps.
+3. If a Webhook signing key is configured in HiAPI account settings, verify `X-HiAPI-Timestamp` and `X-HiAPI-Signature` against the raw body using `hex(HMAC-SHA256(secret, timestamp + "." + rawBody))`; compare in constant time and reject timestamps outside a 5-minute window. Unsigned callbacks omit both headers.
 4. Accept both success and fail terminal notifications.
 5. Make callback handling idempotent by `taskId` because deliveries may be retried.
 6. If a callback is missing or needs confirmation, recover with `GET /v1/tasks/{taskId}`.

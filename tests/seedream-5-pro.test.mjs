@@ -413,6 +413,17 @@ test("reports soft and required skill updates from the manifest", async () => {
   assert.equal(available.status, "available");
   assert.match(available.message, /New version available/);
 
+  const notices = [];
+  const originalConsoleError = console.error;
+  console.error = (...args) => notices.push(args.join(" "));
+  try {
+    const warned = await warnOrRequireSkillUpdate({ currentVersion: "0.2.0", fetchImpl });
+    assert.equal(warned.status, "available");
+  } finally {
+    console.error = originalConsoleError;
+  }
+  assert.match(notices.join("\n"), /New version available/);
+
   await assert.rejects(
     warnOrRequireSkillUpdate({ currentVersion: "0.1.0", fetchImpl }),
     /Update now: npx -y github:HiAPIAI\/hiapi-seedream-5-0-pro-skill -y/,
@@ -504,6 +515,33 @@ test("installer leaves every active target untouched when staging fails", (t) =>
   );
   for (const target of targets) {
     assert.equal(readFileSync(join(target.legacyDir, "SKILL.md"), "utf8"), `${target.label}-legacy`);
+    assert.equal(existsSync(join(target.dir, SKILL_FOLDER)), false);
+    assert.equal(readdirSync(target.dir).some((name) => name.includes(".staging-")), false);
+  }
+});
+
+test("installer rolls back earlier targets when a later activation fails", (t) => {
+  const root = mkdtempSync(join(tmpdir(), "seedream-installer-activate-"));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const repo = createFixtureRepo(root);
+  const homeDir = join(root, "home");
+  const targets = ["codex", "claude"].map((name) => {
+    const dir = join(root, name, "skills");
+    const legacyDir = join(dir, "hiapi-seedream-5-pro");
+    mkdirSync(legacyDir, { recursive: true });
+    writeFileSync(join(legacyDir, "SKILL.md"), `${name}-legacy`);
+    return { label: "duplicate", dir, legacyDir, name };
+  });
+
+  assert.throws(() => installTargets(targets, {
+    repoUrl: repo,
+    execFileImpl: quietExecFile,
+    homeDir,
+    now: () => 123,
+  }));
+
+  for (const target of targets) {
+    assert.equal(readFileSync(join(target.legacyDir, "SKILL.md"), "utf8"), `${target.name}-legacy`);
     assert.equal(existsSync(join(target.dir, SKILL_FOLDER)), false);
     assert.equal(readdirSync(target.dir).some((name) => name.includes(".staging-")), false);
   }

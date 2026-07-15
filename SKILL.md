@@ -74,7 +74,8 @@ node scripts/hiapi-seedream-5-pro.mjs \
 - `callback.url` must be HTTPS.
 - `callback.when` currently supports only `final`.
 - Both success and fail can trigger the final callback. Handle callbacks idempotently by `taskId`.
-- Verify `X-HiAPI-Timestamp` and `X-HiAPI-Signature` against the raw request body using the configured callback secret: `hex(HMAC-SHA256(secret, timestamp + "." + rawBody))`. Use constant-time comparison and reject stale timestamps.
+- Callback signatures are optional. Configure a 16-256 character Webhook signing key on the HiAPI account settings page to receive `X-HiAPI-Timestamp` and `X-HiAPI-Signature`; unsigned callbacks omit both headers.
+- For signed callbacks, verify the raw request body with `hex(HMAC-SHA256(secret, timestamp + "." + rawBody))`, compare in constant time, and reject timestamps outside a 5-minute window.
 - Use `GET /v1/tasks/:id` as a local debugging path or compensation query after a missed callback.
 
 ## Check Configuration
@@ -100,6 +101,7 @@ The CLI prints JSON with `taskId`, `quality`, the resolved aspect ratio, and `ou
 | `INSUFFICIENT_QUOTA` | Ask the user to top up. Do not retry blindly. |
 | Task status `fail` | Report the returned failure reason and correct the request before retrying. |
 | Timeout after 5 minutes | Report the `taskId`; the task may still be queried with `GET /v1/tasks/:id`. |
+| Skill update available | Show the printed update command, then continue with the current request. |
 | Skill update required | Run the printed update command and restart the agent before generating again. |
 
 ## API Reference

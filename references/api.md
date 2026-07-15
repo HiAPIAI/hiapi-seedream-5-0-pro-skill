@@ -73,7 +73,8 @@ Text-to-image must not receive `image_urls`. Image-to-image requires 1-10 refere
 
 - `POST /v1/tasks` returns a `taskId` immediately.
 - Prefer `callback.url` in production. Success and fail can both trigger the final callback, so process it idempotently by `taskId`.
-- Verify callback authenticity from the raw body: `X-HiAPI-Signature = hex(HMAC-SHA256(secret, X-HiAPI-Timestamp + "." + rawBody))`. Compare in constant time and reject stale timestamps to prevent replay.
+- Callback signing is optional. Configure a 16-256 character Webhook signing key on the HiAPI account settings page to receive `X-HiAPI-Timestamp` and `X-HiAPI-Signature`; unsigned callbacks omit both headers.
+- For signed callbacks, verify the raw body with `X-HiAPI-Signature = hex(HMAC-SHA256(secret, X-HiAPI-Timestamp + "." + rawBody))`, compare in constant time, and reject timestamps outside a 5-minute window.
 - Use `GET /v1/tasks/{taskId}` for local debugging, low-frequency tasks, or callback-failure compensation.
 - On `status=success`, read image URLs from `output[].url`.
 - On `status=fail`, surface the returned error and correct the request instead of blindly retrying it.

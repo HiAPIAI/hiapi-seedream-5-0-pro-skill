@@ -30,7 +30,9 @@ HiAPI is an AI API platform built for developers: one API for all AI models. Ima
 
 ## Before You Generate
 
-Seedream 5.0 Pro excels at in-image text (English signage and Chinese brush calligraphy verified). Spell out every word you want rendered verbatim in the prompt, iterate at `1K`, then switch to `2K` for final delivery.
+Seedream 5.0 Pro excels at in-image text, commercial visuals, and photorealistic detail. Spell out every word you want rendered verbatim in the prompt. Use `quality=basic` for 1K iteration and `quality=high` for 2K final delivery.
+
+Version `0.2.0` follows the current API contract: `quality` replaces `resolution`, both models use the same eight aspect ratios, and production callbacks are supported. Older clients generate incompatible requests and need this update.
 
 If the generated image is meant as the starting frame of a video, plan the motion afterward with [hiapi-video-prompt-generator-skill](https://github.com/HiAPIAI/hiapi-video-prompt-generator-skill), then render with [hiapi-seedance-2-0-video-skill](https://github.com/HiAPIAI/hiapi-seedance-2-0-video-skill) (image-to-video).
 
@@ -55,7 +57,7 @@ npx -y github:HiAPIAI/hiapi-seedream-5-0-pro-skill --target=/path   # custom dir
 AGENT_SKILLS_DIR=/path npx -y github:HiAPIAI/hiapi-seedream-5-0-pro-skill -y
 ```
 
-The script also reports whether `HIAPI_API_KEY` is set and links to where to create one.
+The script backs up an existing canonical or legacy installation under `~/.cache/hiapi-skill-backup/`, replaces it with the current version, preserves an existing `.env`, and reports whether `HIAPI_API_KEY` is set.
 
 ### OpenClaw
 
@@ -69,10 +71,11 @@ openclaw skills add https://github.com/HiAPIAI/hiapi-seedream-5-0-pro-skill
 git clone https://github.com/HiAPIAI/hiapi-seedream-5-0-pro-skill.git
 export AGENT_SKILLS_DIR="/path/to/your/agent/skills"
 mkdir -p "$AGENT_SKILLS_DIR"
-cp -R hiapi-seedream-5-0-pro-skill "$AGENT_SKILLS_DIR/hiapi-seedream-5-pro"
+cp -R hiapi-seedream-5-0-pro-skill "$AGENT_SKILLS_DIR/hiapi-seedream-5-0-pro"
 ```
 
 Replace `AGENT_SKILLS_DIR` with your agent's skill directory.
+When manually upgrading from an early release, move the legacy `hiapi-seedream-5-pro` directory out of the skills folder first so the agent does not load duplicate copies. The recommended installer handles this migration automatically.
 
 ### Agent Auto-Install Prompt
 
@@ -122,10 +125,12 @@ Ask your AI Agent to generate images with natural language, or provide reference
 - Text-to-image: describe the image you want and generate it
 - Image-to-image: use `seedream-5.0-pro/image-to-image` (alias `i2i`) with 1-10 `--input-url` values
 - Models: `seedream-5.0-pro/text-to-image` (alias `t2i`, default), `seedream-5.0-pro/image-to-image` (alias `i2i`)
-- Aspect ratios (t2i): `1:1`, `4:3`, `3:4`, `16:9`, `9:16`, `3:2`, `2:3`, `21:9`; i2i adds `match_input_image` (default) to follow the first reference image
-- Resolutions: `1K` (~2 MP) and `2K` (~4 MP); billed per image by tier
+- Aspect ratios (both models): `1:1` (default), `4:3`, `3:4`, `16:9`, `9:16`, `2:3`, `3:2`, `21:9`
+- Quality: `basic` (1K, $0.05/image, default) or `high` (2K, $0.10/image)
 - Output formats: `png` (default), `jpeg`
-- References (i2i): 1-10 image URLs, JPG/PNG/WebP; SVG is not supported
+- References (i2i): 1-10 HTTP(S) JPG/PNG/WebP URLs, up to 10 MB each; SVG is not supported
+- Prompt: 4-5000 characters; around 600 English words or fewer is recommended
+- Production callbacks: HTTPS `callback.url`, with `callback.when=final`
 - Local output: images are saved to `outputs/`
 - URL output: if HiAPI returns an image URL, the Agent returns the URL directly
 - Clear errors: missing Key, invalid Key, insufficient balance, rate limits, and safety policy blocks all include a next step
@@ -134,7 +139,7 @@ Ask your AI Agent to generate images with natural language, or provide reference
 
 Talk directly to your AI Agent:
 
-> Use `$hiapi-seedream-5-pro` to generate a 16:9 image of a sunset over the sea.
+> Use `$hiapi-seedream-5-0-pro` to generate a 16:9 image of a sunset over the sea.
 
 > Use HiAPI Seedream 5.0 Pro to create a minimal logo, aspect ratio 1:1.
 
@@ -145,7 +150,8 @@ Talk directly to your AI Agent:
 ```bash
 node scripts/hiapi-seedream-5-pro.mjs \
   --prompt "Create a cinematic mountain lake photo at sunset" \
-  --aspect-ratio 16:9
+  --aspect-ratio 16:9 \
+  --quality basic
 ```
 
 Image-to-image:
@@ -155,8 +161,8 @@ node scripts/hiapi-seedream-5-pro.mjs \
   --model seedream-5.0-pro/image-to-image \
   --prompt "Turn this product photo into a clean premium studio ad" \
   --input-url "https://example.com/product.jpg" \
-  --aspect-ratio match_input_image \
-  --resolution 2K
+  --aspect-ratio 16:9 \
+  --quality high
 ```
 
 Custom output directory:
@@ -167,6 +173,18 @@ node scripts/hiapi-seedream-5-pro.mjs \
   --aspect-ratio 1:1 \
   --output-dir ./outputs
 ```
+
+Production callback:
+
+```bash
+node scripts/hiapi-seedream-5-pro.mjs \
+  --prompt "Premium product launch poster" \
+  --callback-url "https://your-domain.com/hiapi/callback" \
+  --callback-when final \
+  --no-wait
+```
+
+Both success and fail can trigger the final callback. Make your handler idempotent by `taskId`. Verify `X-HiAPI-Timestamp` and `X-HiAPI-Signature` against the raw body with the configured callback secret, use constant-time comparison, and reject stale timestamps. Use `GET /v1/tasks/:id` for local debugging or callback-failure recovery.
 
 ---
 
@@ -186,9 +204,9 @@ node scripts/hiapi-seedream-5-pro.mjs \
 │   ├── check-config.mjs
 │   ├── hiapi-seedream-5-pro.mjs
 │   └── lib/
-│       └── seedream-5.0-pro/text-to-image.mjs
+│       └── seedream-5-pro.mjs
 ├── tests/
-│   └── seedream-5.0-pro/text-to-image.test.mjs
+│   └── seedream-5-pro.test.mjs
 └── llms-install.md
 ```
 
@@ -204,6 +222,7 @@ node scripts/hiapi-seedream-5-pro.mjs \
 | `429 Too Many Requests` | Wait and retry, or reduce concurrent generation requests. |
 | Content blocked | The prompt triggered a safety policy. Revise the description. |
 | No image output | Check the task response; this skill expects an image URL or data URI in `data.output[]` after the task succeeds. |
+| `--resolution` no longer works | Use `--quality basic` for 1K or `--quality high` for 2K. |
 | Skill update available | The CLI checks the HiAPI skills index at startup. If the update is optional, it prints the upgrade command and continues. |
 | Skill update required | The CLI stops and prints the required upgrade command. Run `npx -y github:HiAPIAI/hiapi-seedream-5-0-pro-skill -y`, then restart your agent. |
 

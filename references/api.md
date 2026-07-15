@@ -2,8 +2,6 @@
 
 ## Endpoint
 
-The Seedream 5.0 Pro family uses HiAPI's unified async task API:
-
 ```text
 POST https://api.hiapi.ai/v1/tasks
 GET https://api.hiapi.ai/v1/tasks/{taskId}
@@ -13,55 +11,44 @@ Set `HIAPI_BASE_URL` to override the host.
 
 ## Authentication
 
-Send the user's HiAPI key as a bearer token:
-
 ```http
 Authorization: Bearer $HIAPI_API_KEY
 Content-Type: application/json
 ```
 
-Do not print API keys in logs or final answers.
+Never print API keys in logs or final answers.
 
-If the user does not have a key, send them to:
-
-```text
-https://www.hiapi.ai/en/register
-```
-
-If generation fails because of balance, credits, quota, or payment status, send them to:
-
-```text
-https://www.hiapi.ai/en/dashboard
-https://www.hiapi.ai/en/pricing
-```
-
-## Request Body
-
-Text-to-image:
+## Text-To-Image Request
 
 ```json
 {
   "model": "seedream-5.0-pro/text-to-image",
   "input": {
-    "prompt": "An elegant vintage Chinese tea house poster, hand-painted brush calligraphy title",
+    "prompt": "An elegant vintage Chinese tea house poster with the exact brush-calligraphy title 山水茶社",
     "aspect_ratio": "3:4",
-    "resolution": "1K",
+    "quality": "basic",
     "output_format": "png"
   }
 }
 ```
 
-Image-to-image:
+## Image-To-Image Request
 
 ```json
 {
   "model": "seedream-5.0-pro/image-to-image",
   "input": {
-    "prompt": "Turn this rainy night street into a sunny morning scene, keep the storefront sign text unchanged",
-    "image_urls": ["https://example.com/street.jpg"],
-    "aspect_ratio": "match_input_image",
-    "resolution": "1K",
+    "prompt": "Turn this rainy night street into a sunny morning while keeping the layout and sign text unchanged",
+    "image_urls": [
+      "https://example.com/street.jpg"
+    ],
+    "aspect_ratio": "16:9",
+    "quality": "high",
     "output_format": "png"
+  },
+  "callback": {
+    "url": "https://your-domain.com/hiapi/callback",
+    "when": "final"
   }
 }
 ```
@@ -71,11 +58,28 @@ Image-to-image:
 | Parameter | Required | Notes |
 | --- | --- | --- |
 | `model` | yes | `seedream-5.0-pro/text-to-image` or `seedream-5.0-pro/image-to-image`. |
-| `input.prompt` | yes | Up to 4000 characters. Spell out any in-image text verbatim. |
-| `input.image_urls` | image-to-image only | 1-10 public reference image URLs (JPG/PNG/WebP; SVG is not supported). Do not send it for text-to-image. |
-| `input.aspect_ratio` | yes | t2i: `1:1`, `4:3`, `3:4`, `16:9`, `9:16`, `3:2`, `2:3`, `21:9`. i2i adds `match_input_image` to follow the first reference image. |
-| `input.resolution` | yes | `1K` (~2 MP) or `2K` (~4 MP, up to 2048x2048). Billed per image by tier. |
+| `input.prompt` | yes | 4-5000 characters. Around 600 English words or fewer is recommended. Write required in-image text verbatim. |
+| `input.image_urls` | i2i only | 1-10 HTTP(S) JPG, PNG, or WebP URLs. Each image may be up to 10 MB. SVG is not supported. |
+| `input.aspect_ratio` | yes | `1:1` (default), `4:3`, `3:4`, `16:9`, `9:16`, `2:3`, `3:2`, or `21:9`. |
+| `input.quality` | yes | `basic` (default, 1K, $0.05/image) or `high` (2K, $0.10/image). |
 | `input.output_format` | no | `png` (default) or `jpeg`. |
-| `storage` (top-level) | no | `temp` (default, ~7 days) or `persistent` (long-term, billed by size). Insufficient balance silently downgrades to temp; the task detail reflects the actual tier. |
+| `callback.url` | when callback is present | HTTPS endpoint that receives the terminal task notification. |
+| `callback.when` | no | Only `final` is supported; it is also the default. |
+| `storage` | no | HiAPI task-level output storage: `temp` or `persistent`. Persistent requests can fall back to temporary storage; inspect task detail for the actual tier. This is not a model input field. |
 
-Text-to-image does not accept `image_urls`. Image-to-image requires it, and the CLI validates the 1-10 limit and SVG rejection before sending the task.
+Text-to-image must not receive `image_urls`. Image-to-image requires 1-10 references. Neither model accepts the removed `resolution`, `match_input_image`, or `auto` values.
+
+## Production Behavior
+
+- `POST /v1/tasks` returns a `taskId` immediately.
+- Prefer `callback.url` in production. Success and fail can both trigger the final callback, so process it idempotently by `taskId`.
+- Verify callback authenticity from the raw body: `X-HiAPI-Signature = hex(HMAC-SHA256(secret, X-HiAPI-Timestamp + "." + rawBody))`. Compare in constant time and reject stale timestamps to prevent replay.
+- Use `GET /v1/tasks/{taskId}` for local debugging, low-frequency tasks, or callback-failure compensation.
+- On `status=success`, read image URLs from `output[].url`.
+- On `status=fail`, surface the returned error and correct the request instead of blindly retrying it.
+
+## Account Links
+
+- API key: https://www.hiapi.ai/en/register
+- Dashboard: https://www.hiapi.ai/en/dashboard
+- Pricing: https://www.hiapi.ai/en/pricing

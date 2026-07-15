@@ -2,15 +2,17 @@
 // HiAPI Seedream 5.0 Pro Skill installer.
 // Run with: npx github:HiAPIAI/hiapi-seedream-5-0-pro-skill -y
 // Flags: -y / --yes, --target=<dir>, --codex, --claude, --skills-dir=<dir>
-import { existsSync, mkdirSync, rmSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
-import { join } from 'node:path';
-import { execSync } from 'node:child_process';
+import { join, resolve } from 'node:path';
+import { execFileSync } from 'node:child_process';
 import { stdin, stdout, exit, env, argv } from 'node:process';
+import { pathToFileURL } from 'node:url';
 import readline from 'node:readline/promises';
 
-const SKILL_FOLDER = 'hiapi-seedream-5-pro';
-const REPO_URL = 'https://github.com/HiAPIAI/hiapi-seedream-5-0-pro-skill.git';
+export const SKILL_FOLDER = 'hiapi-seedream-5-0-pro';
+export const LEGACY_SKILL_FOLDERS = ['hiapi-seedream-5-pro'];
+export const REPO_URL = 'https://github.com/HiAPIAI/hiapi-seedream-5-0-pro-skill.git';
 const DISPLAY_NAME = 'HiAPI Seedream 5.0 Pro Skill';
 const MODEL_PAGE = 'https://www.hiapi.ai/en/models/seedream-5.0-pro-text-to-image';
 const API_KEY_PAGE = 'https://www.hiapi.ai/en/dashboard/api-keys';
@@ -91,22 +93,123 @@ async function resolveTargets() {
 
 function ensureGit() {
   try {
-    execSync('git --version', { stdio: 'ignore' });
+    execFileSync('git', ['--version'], { stdio: 'ignore' });
   } catch {
     console.error(`[${DISPLAY_NAME}] git is required but not found on PATH.`);
     exit(1);
   }
 }
 
-function installTo(target) {
+function moveDirectory(source, destination) {
+  try {
+    renameSync(source, destination);
+  } catch (error) {
+    if (error?.code !== 'EXDEV') throw error;
+    cpSync(source, destination, { recursive: true, errorOnExist: true });
+    rmSync(source, { recursive: true, force: true });
+  }
+}
+
+export function backupExistingSkill(target, folder, { homeDir = homedir(), now = Date.now } = {}) {
+  const source = join(target.dir, folder);
+  if (!existsSync(source)) return null;
+
+  const backupRoot = join(homeDir, '.cache', 'hiapi-skill-backup');
+  mkdirSync(backupRoot, { recursive: true });
+  const agentTag = String(target.label || 'agent').replace(/[^a-z0-9_.-]+/gi, '-').toLowerCase();
+  const timestamp = typeof now === 'function' ? now() : now;
+  const backup = join(backupRoot, `${folder}.${agentTag}.bak.${timestamp}`);
+  const envPath = join(source, '.env');
+  const envContent = existsSync(envPath) ? readFileSync(envPath) : null;
+
+  console.log(`[${DISPLAY_NAME}] Backing up ${source} -> ${backup}`);
+  moveDirectory(source, backup);
+
+  return { source, backup, envContent };
+}
+
+export function stageInstall(
+  target,
+  { repoUrl = REPO_URL, execFileImpl = execFileSync, suffix = `${process.pid}-${Date.now()}` } = {},
+) {
   mkdirSync(target.dir, { recursive: true });
   const destination = join(target.dir, SKILL_FOLDER);
-  if (existsSync(destination)) {
-    console.log(`[${DISPLAY_NAME}] ${destination} exists — replacing.`);
-    rmSync(destination, { recursive: true, force: true });
+  const staging = join(target.dir, `.${SKILL_FOLDER}.staging-${suffix}`);
+  if (existsSync(staging)) {
+    throw new Error(`Installer staging path already exists: ${staging}`);
   }
-  console.log(`[${DISPLAY_NAME}] Cloning into ${destination} …`);
-  execSync(`git clone --depth 1 ${REPO_URL} "${destination}"`, { stdio: 'inherit' });
+
+  console.log(`[${DISPLAY_NAME}] Staging ${target.label} installation in ${staging} ...`);
+  try {
+    execFileImpl('git', ['clone', '--depth', '1', repoUrl, staging], { stdio: 'inherit' });
+    if (!existsSync(join(staging, 'SKILL.md'))) {
+      throw new Error(`Cloned repository does not contain SKILL.md: ${repoUrl}`);
+    }
+  } catch (error) {
+    rmSync(staging, { recursive: true, force: true });
+    throw error;
+  }
+
+  return {
+    target,
+    destination,
+    staging,
+    backups: [],
+    preservedEnv: null,
+    activated: false,
+  };
+}
+
+export function activateInstall(state, { homeDir = homedir(), now = Date.now } = {}) {
+  for (const folder of [SKILL_FOLDER, ...LEGACY_SKILL_FOLDERS]) {
+    const backup = backupExistingSkill(state.target, folder, { homeDir, now });
+    if (!backup) continue;
+    state.backups.push(backup);
+    if (state.preservedEnv === null && backup.envContent !== null) {
+      state.preservedEnv = backup.envContent;
+    }
+  }
+
+  console.log(`[${DISPLAY_NAME}] Activating ${state.destination} ...`);
+  moveDirectory(state.staging, state.destination);
+  state.activated = true;
+
+  if (state.preservedEnv !== null) {
+    writeFileSync(join(state.destination, '.env'), state.preservedEnv, { mode: 0o600 });
+    console.log(`[${DISPLAY_NAME}] Preserved existing .env in the new installation.`);
+  }
+
+  return state;
+}
+
+export function rollbackInstall(state) {
+  try {
+    if (state.activated && existsSync(state.destination)) {
+      rmSync(state.destination, { recursive: true, force: true });
+    }
+    if (existsSync(state.staging)) {
+      rmSync(state.staging, { recursive: true, force: true });
+    }
+    for (const backup of [...state.backups].reverse()) {
+      if (existsSync(backup.backup)) moveDirectory(backup.backup, backup.source);
+    }
+  } catch (error) {
+    console.error(`[${DISPLAY_NAME}] Rollback failed: ${error?.message ?? error}`);
+  }
+}
+
+export function installTargets(targets, options = {}) {
+  const states = [];
+  try {
+    for (let index = 0; index < targets.length; index += 1) {
+      states.push(stageInstall(targets[index], { ...options, suffix: `${process.pid}-${Date.now()}-${index}` }));
+    }
+    for (const state of states) activateInstall(state, options);
+    return states;
+  } catch (error) {
+    for (const state of [...states].reverse()) rollbackInstall(state);
+    throw error;
+  }
 }
 
 function reportApiKey() {
@@ -120,15 +223,20 @@ function reportApiKey() {
   console.log('  Then: export HIAPI_API_KEY="your_key_here"');
 }
 
-(async () => {
+export async function main() {
   ensureGit();
   const targets = await resolveTargets();
-  for (const t of targets) installTo(t);
+  installTargets(targets);
   reportApiKey();
   console.log('');
   console.log(`[${DISPLAY_NAME}] Done. Restart your agent if it caches skills.`);
   console.log(`Model page: ${MODEL_PAGE}`);
-})().catch((err) => {
-  console.error(`[${DISPLAY_NAME}] Failed:`, err?.message ?? err);
-  exit(1);
-});
+}
+
+const isDirectRun = argv[1] && import.meta.url === pathToFileURL(resolve(argv[1])).href;
+if (isDirectRun) {
+  main().catch((err) => {
+    console.error(`[${DISPLAY_NAME}] Failed:`, err?.message ?? err);
+    exit(1);
+  });
+}

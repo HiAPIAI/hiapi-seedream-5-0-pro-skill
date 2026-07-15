@@ -1,6 +1,6 @@
 {
   "name": "hiapi-seedream-5-0-pro-skill",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "HiAPI Seedream 5.0 Pro skill for agent image generation and editing.",
   "license": "MIT",
   "type": "module",

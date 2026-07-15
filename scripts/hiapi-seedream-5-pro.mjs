@@ -27,12 +27,18 @@ function parseArgs(argv) {
       options.prompt = argv[++i];
     } else if (arg === "--aspect-ratio" || arg === "--aspect") {
       options.aspectRatio = argv[++i];
+    } else if (arg === "--quality") {
+      options.quality = argv[++i];
     } else if (arg === "--resolution") {
-      options.resolution = argv[++i];
+      throw new Error('The --resolution option was removed in skill 0.2.0. Use --quality basic (1K) or --quality high (2K).');
     } else if (arg === "--output-format" || arg === "--format") {
       options.outputFormat = argv[++i];
     } else if (arg === "--storage") {
       options.storage = argv[++i];
+    } else if (arg === "--callback-url") {
+      options.callbackUrl = argv[++i];
+    } else if (arg === "--callback-when") {
+      options.callbackWhen = argv[++i];
     } else if (arg === "--input-url" || arg === "--input-urls" || arg === "--image-url" || arg === "--image-urls") {
       if (!options.inputUrls) options.inputUrls = [];
       options.inputUrls.push(argv[++i]);
@@ -64,16 +70,17 @@ function printHelp() {
 Options:
   -m, --model           seedream-5.0-pro/text-to-image (default, alias: t2i) or
                         seedream-5.0-pro/image-to-image (alias: i2i, edit).
-  -p, --prompt          Prompt, up to 4000 characters. Positional text is also accepted.
-      --aspect-ratio    t2i: 1:1 (default), 4:3, 3:4, 16:9, 9:16, 3:2, 2:3, 21:9.
-                        i2i adds match_input_image (default) to follow the first reference image.
-      --resolution      1K (~2 MP) or 2K (~4 MP, up to 2048x2048). Default: 2K
+  -p, --prompt          Prompt, 4-5000 characters. Positional text is also accepted.
+      --aspect-ratio    1:1 (default), 4:3, 3:4, 16:9, 9:16, 3:2, 2:3, or 21:9.
+      --quality         basic (default, 1K, $0.05/image) or high (2K, $0.10/image).
       --output-format   png (default) or jpeg.
       --storage         temp (default, link expires in ~7 days) or persistent
                         (long-term output storage, billed by size; requires the
                         Output Storage feature on your account).
+      --callback-url    HTTPS endpoint notified when the task reaches success or fail.
+      --callback-when   Callback timing. Only final is supported (default: final).
       --input-url       Repeatable, or comma separated. Required 1-10 times for i2i.
-                        JPG/PNG/WebP reference images; SVG is not supported.
+                        JPG/PNG/WebP, up to 10 MB each; SVG is not supported.
   -o, --output-dir      Directory for generated image files. Default: outputs
       --no-save         Return remote URLs without writing files
       --no-wait         Create the task and return the task id
@@ -98,10 +105,12 @@ async function main() {
     model: options.model,
     prompt: options.prompt,
     aspectRatio: options.aspectRatio,
-    resolution: options.resolution,
+    quality: options.quality,
     outputFormat: options.outputFormat,
     inputUrls: options.inputUrls,
     storage: options.storage,
+    callbackUrl: options.callbackUrl,
+    callbackWhen: options.callbackWhen,
   });
 
   const created = await createImageTask(payload, { config });
@@ -118,7 +127,7 @@ async function main() {
           taskId,
           status: "created",
           aspectRatio: payload.input.aspect_ratio,
-          resolution: payload.input.resolution,
+          quality: payload.input.quality,
           outputs: [],
         },
         null,
@@ -143,7 +152,7 @@ async function main() {
         model: payload.model,
         taskId,
         aspectRatio: payload.input.aspect_ratio,
-        resolution: payload.input.resolution,
+        quality: payload.input.quality,
         outputs: savedOutputs,
         rawStatus: response,
       },

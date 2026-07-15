@@ -1,22 +1,22 @@
 ---
 name: hiapi-seedream-5-0-pro
-description: Generate and edit images with ByteDance Seedream 5.0 Pro via the HiAPI unified async task API. Use when a user asks to create an image (flagship quality, sharp in-image text) or edit/compose images with reference images using Seedream 5.0 Pro, Seedream 5 Pro, or this specific skill.
-metadata:
-  short-description: Generate and edit Seedream 5.0 Pro images through HiAPI
+description: Generate and edit images with ByteDance Seedream 5.0 Pro through the HiAPI unified async task API. Use when a user asks for Seedream 5.0 Pro or Seedream 5 Pro text-to-image generation, sharp in-image text, commercial or photorealistic images, consistency-preserving edits, or multi-reference image composition.
 ---
 
 # HiAPI Seedream 5.0 Pro
 
-Use this skill when the user wants image generation or reference-based image editing through ByteDance Seedream 5.0 Pro on HiAPI. One skill covers both models:
+Use this skill for both HiAPI models:
 
-- `seedream-5.0-pro/text-to-image` (alias `t2i`, default) — flagship text-to-image with sharp in-image text rendering (English signage and Chinese brush calligraphy verified), photoreal portraits.
-- `seedream-5.0-pro/image-to-image` (alias `i2i`) — consistency-preserving edits and multi-reference composites with 1-10 reference images; keeps layout and in-image text when instructed.
+- `seedream-5.0-pro/text-to-image` (alias `t2i`, default): text-to-image with strong poster, signage, calligraphy, product, and portrait rendering.
+- `seedream-5.0-pro/image-to-image` (alias `i2i`): edits and multi-reference compositions using 1-10 reference images.
+
+The current request contract uses `quality`, not the removed `resolution` field. Both models use the same eight aspect ratios; do not send `match_input_image` or `auto`.
 
 ## Requirements
 
 - Node.js 18 or newer.
-- `HIAPI_API_KEY` must be set in the environment.
-- `HIAPI_BASE_URL` is optional and defaults to `https://api.hiapi.ai`.
+- Set `HIAPI_API_KEY` in the environment.
+- Optionally set `HIAPI_BASE_URL`; the default is `https://api.hiapi.ai`.
 
 Important links:
 
@@ -24,62 +24,86 @@ Important links:
 - Pricing: https://www.hiapi.ai/en/pricing
 - Docs: https://docs.hiapi.ai
 
-Never invent an image result. If the API call fails, report the status code, compact error message, and the next action from the Error Guidance section.
+Never invent an image result. If an API call fails, report the status code, compact error message, and the next action from Error Guidance.
 
-## Generate An Image (text-to-image)
-
-Run:
+## Generate An Image
 
 ```bash
-node scripts/hiapi-seedream-5-pro.mjs --prompt "An elegant vintage Chinese tea house poster, brush calligraphy title" --aspect-ratio 3:4 --resolution 1K
+node scripts/hiapi-seedream-5-pro.mjs \
+  --prompt "An elegant vintage Chinese tea house poster with the exact title 山水茶社" \
+  --aspect-ratio 3:4 \
+  --quality basic
 ```
 
 Parameters:
 
-- `--aspect-ratio`: `1:1` (default), `4:3`, `3:4`, `16:9`, `9:16`, `3:2`, `2:3`, `21:9`.
-- `--resolution`: `1K` (~2 MP, cheaper, fast iteration) or `2K` (~4 MP, default, final delivery). Billing is tiered by resolution.
+- `--prompt`: 4-5000 characters. Keep prompts around 600 English words or fewer when possible. Spell out in-image text verbatim.
+- `--aspect-ratio`: `1:1` (default), `4:3`, `3:4`, `16:9`, `9:16`, `2:3`, `3:2`, or `21:9`.
+- `--quality`: `basic` (default, 1K, $0.05/image) or `high` (2K, $0.10/image).
 - `--output-format`: `png` (default) or `jpeg`.
-- Prompt up to 4000 characters. Spell out any in-image text verbatim; the model keeps glyphs accurate.
-- `--storage`: `temp` (default; output link expires in ~7 days) or `persistent` (long-term Output Storage, billed by size). The CLI also downloads results to `outputs/` either way.
+- `--storage`: optional HiAPI task storage tier, `temp` or `persistent`. Persistent requests can fall back to temporary storage; inspect the task detail for the actual tier. The CLI also downloads completed outputs to `outputs/` by default.
 
-## Edit Images (image-to-image)
-
-Run:
+## Edit Or Compose Images
 
 ```bash
-node scripts/hiapi-seedream-5-pro.mjs --model i2i \
-  --prompt "Turn this rainy night street into a sunny morning, keep the storefront sign text unchanged" \
-  --input-url https://example.com/street.jpg --resolution 1K
+node scripts/hiapi-seedream-5-pro.mjs \
+  --model i2i \
+  --prompt "Turn this rainy night street into a sunny morning while keeping the layout and sign text unchanged" \
+  --input-url https://example.com/street.jpg \
+  --aspect-ratio 16:9 \
+  --quality high
 ```
 
-- `--input-url` is repeatable (or comma separated): 1-10 reference image URLs. JPG/PNG/WebP; SVG is not supported.
-- `--aspect-ratio` gains `match_input_image` (default for i2i) to follow the first reference image.
-- For multi-reference composites, state each image's role in the prompt (e.g. "person from image 1, scene from image 2").
-- To preserve layout or text, say so explicitly in the prompt ("keep ... unchanged").
+- Repeat `--input-url` or pass comma-separated values for 1-10 reference URLs.
+- References must be HTTP(S) JPG, PNG, or WebP images, up to 10 MB each. SVG is not supported.
+- For multi-reference work, state each image's role, such as "person from image 1, scene from image 2".
+- State every element that must remain unchanged, especially identity, layout, product details, and in-image text.
+
+## Production Callbacks
+
+Prefer a callback for production services and use polling for local debugging or callback recovery:
+
+```bash
+node scripts/hiapi-seedream-5-pro.mjs \
+  --prompt "Premium product launch poster" \
+  --callback-url https://your-domain.com/hiapi/callback \
+  --callback-when final \
+  --no-wait
+```
+
+- `callback.url` must be HTTPS.
+- `callback.when` currently supports only `final`.
+- Both success and fail can trigger the final callback. Handle callbacks idempotently by `taskId`.
+- Callback signatures are optional. Configure a 16-256 character Webhook signing key on the HiAPI account settings page to receive `X-HiAPI-Timestamp` and `X-HiAPI-Signature`; unsigned callbacks omit both headers.
+- For signed callbacks, verify the raw request body with `hex(HMAC-SHA256(secret, timestamp + "." + rawBody))`, compare in constant time, and reject timestamps outside a 5-minute window.
+- Use `GET /v1/tasks/:id` as a local debugging path or compensation query after a missed callback.
 
 ## Check Configuration
 
 ```bash
-node scripts/check-config.mjs          # offline check
-node scripts/check-config.mjs --live   # makes one authenticated request
+node scripts/check-config.mjs
+node scripts/check-config.mjs --live
 ```
 
 ## Output
 
-The CLI prints JSON with `taskId`, the resolved input, and `outputs` (saved file paths by default, or remote URLs with `--no-save`). Generated files land in `outputs/` unless `--output-dir` is set. See `references/output.md`.
+The CLI prints JSON with `taskId`, `quality`, the resolved aspect ratio, and `outputs`. Completed files are saved under `outputs/` unless `--output-dir` or `--no-save` is used. See `references/output.md`.
 
 ## Error Guidance
 
 | Symptom | Action |
 | --- | --- |
-| `HIAPI_API_KEY is required` | Ask the user to set `HIAPI_API_KEY`. Do not guess a key. |
-| 401 / `invalid api key` | Key is wrong or revoked — ask the user to check the dashboard. |
-| `permission_denied` | The key cannot use this model (group or model allowlist) — ask the user to verify plan/limits. |
-| 400 `missing required field "image_urls"` | You called i2i without `--input-url`. Add 1-10 reference URLs. |
-| 400 `additional properties` | You passed reference images to t2i. Switch to `--model i2i`. |
-| `INSUFFICIENT_QUOTA` | Balance is empty — ask the user to top up. Never retry blindly. |
-| Timeout after 3 minutes | Report the `taskId` so the user can query `GET /v1/tasks/:id` later. |
+| `HIAPI_API_KEY is required` | Ask the user to set `HIAPI_API_KEY`. Never guess a key. |
+| 401 / invalid API key | Ask the user to check or regenerate the key. |
+| `permission_denied` | Ask the user to verify model access, group, plan, and limits. |
+| Missing `image_urls` | Add 1-10 `--input-url` values for i2i. |
+| Reference images sent to t2i | Switch to `--model i2i` or remove the references. |
+| `INSUFFICIENT_QUOTA` | Ask the user to top up. Do not retry blindly. |
+| Task status `fail` | Report the returned failure reason and correct the request before retrying. |
+| Timeout after 5 minutes | Report the `taskId`; the task may still be queried with `GET /v1/tasks/:id`. |
+| Skill update available | Show the printed update command, then continue with the current request. |
+| Skill update required | Run the printed update command and restart the agent before generating again. |
 
 ## API Reference
 
-See `references/api.md` for the raw `/v1/tasks` request and response contract.
+Read `references/api.md` for the raw `/v1/tasks` request contract and `references/output.md` for callback, polling, and output handling.

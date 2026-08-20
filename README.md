@@ -8,7 +8,7 @@ Add Seedream 5.0 Pro image generation to your AI Agent.
 
 Languages: [English](README.md) | [简体中文](README.zh-CN.md)
 
-> **HiAPI Matrix:** 🎨 [Image Prompts](https://github.com/HiAPIAI/hiapi-skills) · 🎬 [Video Prompts](https://github.com/HiAPIAI/awesome-seedance-2-0-prompts) · 🛠️ **Agent Skills (you are here)** · 🤖 [Remote MCP](https://docs.hiapi.ai/for-ai/) · 📖 [API Docs](https://docs.hiapi.ai)
+> **HiAPI Matrix:** 🎨 [Image Prompts](https://github.com/HiAPIAI/hiapi-skills) · 🎬 [Video Prompts](https://github.com/HiAPIAI/awesome-ai-video-prompts) · 🛠️ **Agent Skills (you are here)** · 🤖 [Remote MCP](https://docs.hiapi.ai/for-ai/) · 📖 [API Docs](https://docs.hiapi.ai)
 
 ---
 

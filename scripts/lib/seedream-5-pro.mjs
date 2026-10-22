@@ -4,11 +4,12 @@ import path from "node:path";
 export const MODEL = "seedream-5.0-pro/text-to-image";
 export const IMAGE_TO_IMAGE_MODEL = "seedream-5.0-pro/image-to-image";
 export const SKILL_ID = "hiapi-seedream-5-0-pro";
-export const SKILL_VERSION = "0.2.0";
+export const SKILL_VERSION = "0.2.1";
 export const DEFAULT_BASE_URL = "https://api.hiapi.ai";
 export const DEFAULT_SKILLS_MANIFEST_URL = "https://raw.githubusercontent.com/HiAPIAI/hiapi-skills/main/skills.json";
 export const DEFAULT_ASPECT_RATIO = "1:1";
-export const DEFAULT_QUALITY = "basic";
+// The public contract documents `resolution` as required with a 2K default.
+export const DEFAULT_RESOLUTION = "2K";
 export const DEFAULT_OUTPUT_FORMAT = "png";
 export const DEFAULT_OUTPUT_DIR = "outputs";
 export const POLL_INTERVAL_MS = 3000;
@@ -19,7 +20,12 @@ export const HIAPI_DASHBOARD_URL = "https://www.hiapi.ai/en/dashboard";
 export const HIAPI_PRICING_URL = "https://www.hiapi.ai/en/pricing";
 const BASE_ASPECT_RATIOS = ["1:1", "4:3", "3:4", "16:9", "9:16", "3:2", "2:3", "21:9"];
 export const SUPPORTED_ASPECT_RATIOS = new Set(BASE_ASPECT_RATIOS);
-export const SUPPORTED_QUALITIES = new Set(["basic", "high"]);
+export const SUPPORTED_RESOLUTIONS = new Set(["1K", "2K"]);
+// Deprecated --quality aliases kept for 0.2.0 users.
+export const QUALITY_ALIASES = new Map([
+  ["basic", "1K"],
+  ["high", "2K"],
+]);
 export const SUPPORTED_OUTPUT_FORMATS = new Set(["png", "jpeg"]);
 export const SUPPORTED_STORAGE_TIERS = new Set(["temp", "persistent"]);
 export const SUPPORTED_MODELS = new Set([MODEL, IMAGE_TO_IMAGE_MODEL]);
@@ -56,12 +62,21 @@ export function normalizeAspectRatio(value, model = MODEL) {
   return normalized;
 }
 
-export function normalizeQuality(value = DEFAULT_QUALITY) {
-  const quality = String(value || DEFAULT_QUALITY).trim().toLowerCase();
-  if (!SUPPORTED_QUALITIES.has(quality)) {
-    throw new Error(`Unsupported quality "${quality}". Supported values: basic (1K), high (2K).`);
+export function normalizeResolution(value = DEFAULT_RESOLUTION) {
+  const resolution = String(value || DEFAULT_RESOLUTION).trim().toUpperCase();
+  if (!SUPPORTED_RESOLUTIONS.has(resolution)) {
+    throw new Error(`Unsupported resolution "${resolution}". Supported values: 1K or 2K.`);
   }
-  return quality;
+  return resolution;
+}
+
+export function resolutionFromLegacyQuality(value) {
+  const quality = String(value || "").trim().toLowerCase();
+  const resolution = QUALITY_ALIASES.get(quality);
+  if (!resolution) {
+    throw new Error(`Unsupported --quality "${quality}". Use --resolution 1K or 2K.`);
+  }
+  return resolution;
 }
 
 export function normalizeOutputFormat(value = DEFAULT_OUTPUT_FORMAT) {
@@ -132,7 +147,8 @@ export function buildImagePayload({
   model = MODEL,
   prompt,
   aspectRatio,
-  quality = DEFAULT_QUALITY,
+  resolution,
+  quality,
   outputFormat = DEFAULT_OUTPUT_FORMAT,
   inputUrls,
   storage,
@@ -159,14 +175,16 @@ export function buildImagePayload({
   }
 
   const normalizedAspectRatio = normalizeAspectRatio(aspectRatio, normalizedModel);
-  const normalizedQuality = normalizeQuality(quality);
+  const normalizedResolution = normalizeResolution(
+    resolution !== undefined ? resolution : quality !== undefined ? resolutionFromLegacyQuality(quality) : DEFAULT_RESOLUTION,
+  );
   const normalizedOutputFormat = normalizeOutputFormat(outputFormat);
 
   const input = {
     prompt: normalizedPrompt,
     ...(isI2i ? { image_urls: normalizedInputUrls } : {}),
     aspect_ratio: normalizedAspectRatio,
-    quality: normalizedQuality,
+    resolution: normalizedResolution,
     output_format: normalizedOutputFormat,
   };
 
@@ -344,7 +362,7 @@ export async function generateImage(options, config = resolveConfig()) {
       taskId,
       status: "created",
       aspectRatio: payload.input.aspect_ratio,
-      quality: payload.input.quality,
+      resolution: payload.input.resolution,
       outputs: [],
     };
   }
@@ -366,7 +384,7 @@ export async function generateImage(options, config = resolveConfig()) {
     model: payload.model,
     taskId,
     aspectRatio: payload.input.aspect_ratio,
-    quality: payload.input.quality,
+    resolution: payload.input.resolution,
     outputs: savedOutputs,
     rawStatus: response,
   };

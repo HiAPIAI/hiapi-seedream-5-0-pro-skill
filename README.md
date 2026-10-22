@@ -30,9 +30,9 @@ HiAPI is an AI API platform built for developers: one API for all AI models. Ima
 
 ## Before You Generate
 
-Seedream 5.0 Pro excels at in-image text, commercial visuals, and photorealistic detail. Spell out every word you want rendered verbatim in the prompt. Use `quality=basic` for 1K iteration and `quality=high` for 2K final delivery.
+Seedream 5.0 Pro excels at in-image text, commercial visuals, and photorealistic detail. Spell out every word you want rendered verbatim in the prompt. Use `resolution=1K` for iteration and `resolution=2K` for final delivery.
 
-Version `0.2.0` follows the current API contract: `quality` replaces `resolution`, both models use the same eight aspect ratios, and production callbacks are supported. Older clients generate incompatible requests and need this update.
+Version `0.2.1` follows the current API contract: `resolution` (`1K`/`2K`) is required and `quality` is rejected, both models use the same eight aspect ratios, and production callbacks are supported. The 0.2.0 `--quality` flag remains as a deprecated alias (`basic` = `1K`, `high` = `2K`).
 
 If the generated image is meant as the starting frame of a video, plan the motion afterward with [hiapi-video-prompt-generator-skill](https://github.com/HiAPIAI/hiapi-video-prompt-generator-skill), then render with [hiapi-seedance-2-0-video-skill](https://github.com/HiAPIAI/hiapi-seedance-2-0-video-skill) (image-to-video).
 
@@ -125,7 +125,7 @@ Ask your AI Agent to generate images with natural language, or provide reference
 - Image-to-image: use `seedream-5.0-pro/image-to-image` (alias `i2i`) with 1-10 `--input-url` values
 - Models: `seedream-5.0-pro/text-to-image` (alias `t2i`, default), `seedream-5.0-pro/image-to-image` (alias `i2i`)
 - Aspect ratios (both models): `1:1` (default), `4:3`, `3:4`, `16:9`, `9:16`, `2:3`, `3:2`, `21:9`
-- Quality: `basic` (1K, $0.05/image, default) or `high` (2K, $0.10/image)
+- Resolution: `1K` (t2i $0.05/image, i2i $0.06/image) or `2K` ($0.10/image, documented default)
 - Output formats: `png` (default), `jpeg`
 - References (i2i): 1-10 HTTP(S) JPG/PNG/WebP URLs, up to 10 MB each; SVG is not supported
 - Prompt: 4-5000 characters; around 600 English words or fewer is recommended
@@ -150,7 +150,7 @@ Talk directly to your AI Agent:
 node scripts/hiapi-seedream-5-pro.mjs \
   --prompt "Create a cinematic mountain lake photo at sunset" \
   --aspect-ratio 16:9 \
-  --quality basic
+  --resolution 1K
 ```
 
 Image-to-image:
@@ -161,7 +161,7 @@ node scripts/hiapi-seedream-5-pro.mjs \
   --prompt "Turn this product photo into a clean premium studio ad" \
   --input-url "https://example.com/product.jpg" \
   --aspect-ratio 16:9 \
-  --quality high
+  --resolution 2K
 ```
 
 Custom output directory:
@@ -221,7 +221,7 @@ Both success and fail can trigger the final callback. Make your handler idempote
 | `429 Too Many Requests` | Wait and retry, or reduce concurrent generation requests. |
 | Content blocked | The prompt triggered a safety policy. Revise the description. |
 | No image output | Check the task response; this skill expects an image URL or data URI in `data.output[]` after the task succeeds. |
-| `--resolution` no longer works | Use `--quality basic` for 1K or `--quality high` for 2K. |
+| `--quality` prints a deprecation warning | Switch to `--resolution 1K` or `--resolution 2K`. |
 | Skill update available | The CLI checks the HiAPI skills index at startup. If the update is optional, it prints the upgrade command and continues. |
 | Skill update required | The CLI stops and prints the required upgrade command. Run `npx -y github:HiAPIAI/hiapi-seedream-5-0-pro-skill -y`, then restart your agent. |
 

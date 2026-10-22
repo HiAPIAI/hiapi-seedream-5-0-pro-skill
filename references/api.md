@@ -26,7 +26,7 @@ Never print API keys in logs or final answers.
   "input": {
     "prompt": "An elegant vintage Chinese tea house poster with the exact brush-calligraphy title 山水茶社",
     "aspect_ratio": "3:4",
-    "quality": "basic",
+    "resolution": "1K",
     "output_format": "png"
   }
 }
@@ -43,7 +43,7 @@ Never print API keys in logs or final answers.
       "https://example.com/street.jpg"
     ],
     "aspect_ratio": "16:9",
-    "quality": "high",
+    "resolution": "2K",
     "output_format": "png"
   },
   "callback": {
@@ -61,13 +61,13 @@ Never print API keys in logs or final answers.
 | `input.prompt` | yes | 4-5000 characters. Around 600 English words or fewer is recommended. Write required in-image text verbatim. |
 | `input.image_urls` | i2i only | 1-10 HTTP(S) JPG, PNG, or WebP URLs. Each image may be up to 10 MB. SVG is not supported. |
 | `input.aspect_ratio` | yes | `1:1` (default), `4:3`, `3:4`, `16:9`, `9:16`, `2:3`, `3:2`, or `21:9`. |
-| `input.quality` | yes | `basic` (default, 1K, $0.05/image) or `high` (2K, $0.10/image). |
+| `input.resolution` | yes | `1K` or `2K`; the documented default is `2K`. Price per image: t2i 1K $0.05, 2K $0.10; i2i 1K $0.06, 2K $0.10. |
 | `input.output_format` | no | `png` (default) or `jpeg`. |
 | `callback.url` | when callback is present | HTTPS endpoint that receives the terminal task notification. |
 | `callback.when` | no | Only `final` is supported; it is also the default. |
 | `storage` | no | HiAPI task-level output storage: `temp` or `persistent`. Persistent requests can fall back to temporary storage; inspect task detail for the actual tier. This is not a model input field. |
 
-Text-to-image must not receive `image_urls`. Image-to-image requires 1-10 references. Neither model accepts the removed `resolution`, `match_input_image`, or `auto` values.
+Text-to-image must not receive `image_urls`. Image-to-image requires 1-10 references. `input.resolution` is required on every request (`additionalProperties: false` rejects unknown fields). Neither model accepts `quality`, `match_input_image`, or `auto`.
 
 ## Production Behavior
 

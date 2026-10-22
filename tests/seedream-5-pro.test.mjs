@@ -25,7 +25,8 @@ import {
   extractImageOutputs,
   normalizeModel,
   normalizeAspectRatio,
-  normalizeQuality,
+  normalizeResolution,
+  resolutionFromLegacyQuality,
   resolveConfig,
   saveImageOutputs,
   SKILL_VERSION,
@@ -62,7 +63,7 @@ test("builds the HiAPI task payload for text-to-image", () => {
   const payload = buildImagePayload({
     prompt: "Create a product poster",
     aspectRatio: "16:9",
-    quality: "high",
+    resolution: "1K",
   });
 
   assert.deepEqual(payload, {
@@ -70,7 +71,7 @@ test("builds the HiAPI task payload for text-to-image", () => {
     input: {
       prompt: "Create a product poster",
       aspect_ratio: "16:9",
-      quality: "high",
+      resolution: "1K",
       output_format: "png",
     },
   });
@@ -90,7 +91,7 @@ test("builds image-to-image payloads with image_urls and the 1:1 default", () =>
       prompt: "Turn this rainy street into a sunny morning, keep the sign text unchanged",
       image_urls: ["https://example.com/a.jpg", "https://example.com/b.png"],
       aspect_ratio: "1:1",
-      quality: "basic",
+      resolution: "2K",
       output_format: "jpeg",
     },
   });
@@ -142,12 +143,20 @@ test("validates models, aliases, and reference image rules", () => {
   );
 });
 
-test("validates and sends basic/high quality tiers", () => {
-  assert.equal(normalizeQuality(), "basic");
-  assert.equal(normalizeQuality("HIGH"), "high");
-  assert.equal(buildImagePayload({ prompt: "draw" }).input.quality, "basic");
-  assert.equal(buildImagePayload({ prompt: "draw", quality: "high" }).input.quality, "high");
-  assert.throws(() => normalizeQuality("2K"), /Unsupported quality/);
+test("validates and sends the required 1K/2K resolution", () => {
+  assert.equal(normalizeResolution(), "2K");
+  assert.equal(normalizeResolution("1k"), "1K");
+  assert.equal(buildImagePayload({ prompt: "draw" }).input.resolution, "2K");
+  assert.equal(buildImagePayload({ prompt: "draw", resolution: "1K" }).input.resolution, "1K");
+  assert.throws(() => normalizeResolution("4K"), /Unsupported resolution/);
+});
+
+test("maps the deprecated basic/high quality alias to resolution", () => {
+  assert.equal(resolutionFromLegacyQuality("basic"), "1K");
+  assert.equal(resolutionFromLegacyQuality("HIGH"), "2K");
+  assert.equal(buildImagePayload({ prompt: "draw", quality: "basic" }).input.resolution, "1K");
+  assert.equal("quality" in buildImagePayload({ prompt: "draw", quality: "high" }).input, false);
+  assert.throws(() => resolutionFromLegacyQuality("medium"), /Unsupported --quality/);
 });
 
 test("passes storage tier through to the task payload", () => {
@@ -383,7 +392,7 @@ test("compares semver-like skill versions", () => {
 
 test("keeps package and runtime skill versions aligned", () => {
   const packageJson = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8"));
-  assert.equal(SKILL_VERSION, "0.2.0");
+  assert.equal(SKILL_VERSION, "0.2.1");
   assert.equal(packageJson.version, SKILL_VERSION);
 });
 

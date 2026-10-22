@@ -2,4 +2,4 @@ interface:
   display_name: "HiAPI Seedream 5.0 Pro"
   short_description: "Generate and edit Seedream 5.0 Pro images"
   brand_color: "#10A37F"
-  default_prompt: "Use $hiapi-seedream-5-0-pro to generate a 16:9 launch poster with basic quality through HiAPI."
+  default_prompt: "Use $hiapi-seedream-5-0-pro to generate a 16:9 launch poster at 1K resolution through HiAPI."

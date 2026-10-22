@@ -32,7 +32,7 @@ HiAPI 是为开发者打造的 AI API 平台：一个 API，所有 AI 模型。�
 
 如果你需要一个已经验证过的起点，先看 [HiAPI Skills directory](https://github.com/HiAPIAI/hiapi-skills)。它包含真实效果图、完整提示词、画面比例、HiAPI Draw 链接和来源署名。选中一个配方后，把人物、产品、城市、品牌或文案换成自己的内容，再用这个 skill 生成改写后的结果。
 
-`0.2.0` 已切换到当前接口契约：使用 `quality` 代替 `resolution`，文生图和图生图统一使用 8 种比例，并支持生产回调。旧版客户端会生成不兼容请求，需要升级。
+`0.2.1` 已对齐当前接口契约：`resolution`（`1K`/`2K`）为必填字段，`quality` 会被拒绝；文生图和图生图统一使用 8 种比例，并支持生产回调。0.2.0 的 `--quality` 保留为废弃别名（`basic` = `1K`，`high` = `2K`），调用时会打印提示。
 
 如果生成的图是要作为视频的起始帧，接下来用 [hiapi-video-prompt-generator-skill](https://github.com/HiAPIAI/hiapi-video-prompt-generator-skill) 规划镜头，再交给 [hiapi-seedance-2-0-video-skill](https://github.com/HiAPIAI/hiapi-seedance-2-0-video-skill)（图生视频）出片。
 
@@ -125,7 +125,7 @@ node scripts/check-config.mjs --live
 - 图生图:用 `seedream-5.0-pro/image-to-image`(别名 `i2i`),`--input-url` 传 1-10 张参考图
 - 模型变体：`seedream-5.0-pro/text-to-image`(别名 `t2i`,默认)、`seedream-5.0-pro/image-to-image`(别名 `i2i`)
 - 画面比例：两种模型都支持 `1:1`（默认）、`4:3`、`3:4`、`16:9`、`9:16`、`2:3`、`3:2`、`21:9`
-- 质量档位：`basic`（默认，1K，$0.05/张）或 `high`（2K，$0.10/张）
+- 分辨率：`1K`（文生图 $0.05/张，图生图 $0.06/张）或 `2K`（$0.10/张，接口文档默认值）
 - 参考图：图生图支持 1-10 个 HTTP(S) JPG/PNG/WebP URL，每张最大 10 MB，不支持 SVG
 - 提示词：4-5000 字符，建议尽量控制在约 600 个英文词以内
 - 生产回调：顶层传 HTTPS `callback.url`，`callback.when` 固定为 `final`
@@ -149,7 +149,7 @@ node scripts/check-config.mjs --live
 node scripts/hiapi-seedream-5-pro.mjs \
   --prompt "Create a cinematic mountain lake photo at sunset" \
   --aspect-ratio 16:9 \
-  --quality basic
+  --resolution 1K
 ```
 
 图生图：
@@ -160,7 +160,7 @@ node scripts/hiapi-seedream-5-pro.mjs \
   --prompt "把这张产品图改成干净高级的棚拍广告图" \
   --input-url "https://example.com/product.jpg" \
   --aspect-ratio 16:9 \
-  --quality high
+  --resolution 2K
 ```
 
 自定义输出目录：
@@ -220,7 +220,7 @@ node scripts/hiapi-seedream-5-pro.mjs \
 | `429 Too Many Requests` | 稍后重试，或减少并发生成请求。 |
 | 内容被拦截 | 提示词触发了内容安全策略，请修改描述。 |
 | 没有图片输出 | 检查任务返回内容；该 skill 期望任务成功后在 `data.output[]` 中返回图片 URL 或 data URI。 |
-| `--resolution` 已不可用 | 1K 使用 `--quality basic`，2K 使用 `--quality high`。 |
+| `--quality` 提示已废弃 | 改用 `--resolution 1K` 或 `--resolution 2K`。 |
 | 有可选更新 | CLI 启动时会检查 HiAPI skills 索引。如果只是建议升级，会打印升级命令并继续执行。 |
 | 必须更新 | CLI 会停止并打印必须执行的升级命令。运行 `npx -y github:HiAPIAI/hiapi-seedream-5-0-pro-skill -y` 后重启 Agent。 |
 

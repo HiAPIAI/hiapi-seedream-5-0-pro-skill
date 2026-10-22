@@ -5,6 +5,7 @@ import {
   buildImagePayload,
   createImageTask,
   extractTaskId,
+  resolutionFromLegacyQuality,
   resolveConfig,
   saveImageOutputs,
   warnOrRequireSkillUpdate,
@@ -28,9 +29,19 @@ function parseArgs(argv) {
     } else if (arg === "--aspect-ratio" || arg === "--aspect") {
       options.aspectRatio = argv[++i];
     } else if (arg === "--quality") {
-      options.quality = argv[++i];
+      if (options.resolution !== undefined) {
+        throw new Error("Use either --resolution (<1K|2K>) or the deprecated --quality, not both.");
+      }
+      options.resolution = resolutionFromLegacyQuality(argv[++i]);
+      options.viaQualityAlias = true;
+      console.error(`warning: --quality is deprecated; use --resolution ${options.resolution} instead.`);
     } else if (arg === "--resolution") {
-      throw new Error('The --resolution option was removed in skill 0.2.0. Use --quality basic (1K) or --quality high (2K).');
+      if (options.viaQualityAlias) {
+        throw new Error("Use either --resolution (<1K|2K>) or the deprecated --quality, not both.");
+      }
+      options.resolution = argv[++i];
+    } else if (arg === "--dry-run") {
+      options.dryRun = true;
     } else if (arg === "--output-format" || arg === "--format") {
       options.outputFormat = argv[++i];
     } else if (arg === "--storage") {
@@ -72,7 +83,9 @@ Options:
                         seedream-5.0-pro/image-to-image (alias: i2i, edit).
   -p, --prompt          Prompt, 4-5000 characters. Positional text is also accepted.
       --aspect-ratio    1:1 (default), 4:3, 3:4, 16:9, 9:16, 3:2, 2:3, or 21:9.
-      --quality         basic (default, 1K, $0.05/image) or high (2K, $0.10/image).
+      --resolution      1K $0.05/image (t2i) or $0.06/image (i2i), or 2K $0.10/image.
+                        Default: 2K. Required by the API on every request.
+      --quality         Deprecated alias: basic = 1K, high = 2K. Use --resolution.
       --output-format   png (default) or jpeg.
       --storage         temp (default, link expires in ~7 days) or persistent
                         (long-term output storage, billed by size; requires the
@@ -84,6 +97,7 @@ Options:
   -o, --output-dir      Directory for generated image files. Default: outputs
       --no-save         Return remote URLs without writing files
       --no-wait         Create the task and return the task id
+      --dry-run         Print the request payload without calling the API
   -h, --help            Show this help
 
 Environment:
@@ -98,14 +112,11 @@ async function main() {
     return;
   }
 
-  await warnOrRequireSkillUpdate();
-
-  const config = resolveConfig();
   const payload = buildImagePayload({
     model: options.model,
     prompt: options.prompt,
     aspectRatio: options.aspectRatio,
-    quality: options.quality,
+    resolution: options.resolution,
     outputFormat: options.outputFormat,
     inputUrls: options.inputUrls,
     storage: options.storage,
@@ -113,6 +124,14 @@ async function main() {
     callbackWhen: options.callbackWhen,
   });
 
+  if (options.dryRun) {
+    console.log(JSON.stringify(payload, null, 2));
+    return;
+  }
+
+  await warnOrRequireSkillUpdate();
+
+  const config = resolveConfig();
   const created = await createImageTask(payload, { config });
   const taskId = extractTaskId(created);
   if (!taskId) {
@@ -127,7 +146,7 @@ async function main() {
           taskId,
           status: "created",
           aspectRatio: payload.input.aspect_ratio,
-          quality: payload.input.quality,
+          resolution: payload.input.resolution,
           outputs: [],
         },
         null,
@@ -152,7 +171,7 @@ async function main() {
         model: payload.model,
         taskId,
         aspectRatio: payload.input.aspect_ratio,
-        quality: payload.input.quality,
+        resolution: payload.input.resolution,
         outputs: savedOutputs,
         rawStatus: response,
       },

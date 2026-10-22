@@ -10,7 +10,7 @@ Use this skill for both HiAPI models:
 - `seedream-5.0-pro/text-to-image` (alias `t2i`, default): text-to-image with strong poster, signage, calligraphy, product, and portrait rendering.
 - `seedream-5.0-pro/image-to-image` (alias `i2i`): edits and multi-reference compositions using 1-10 reference images.
 
-The current request contract uses `quality`, not the removed `resolution` field. Both models use the same eight aspect ratios; do not send `match_input_image` or `auto`.
+The current request contract requires `resolution` (`1K` or `2K`; the API documents `2K` as the default) and rejects `quality`. Both models use the same eight aspect ratios; do not send `match_input_image` or `auto`.
 
 ## Requirements
 
@@ -32,14 +32,14 @@ Never invent an image result. If an API call fails, report the status code, comp
 node scripts/hiapi-seedream-5-pro.mjs \
   --prompt "An elegant vintage Chinese tea house poster with the exact title 山水茶社" \
   --aspect-ratio 3:4 \
-  --quality basic
+  --resolution 1K
 ```
 
 Parameters:
 
 - `--prompt`: 4-5000 characters. Keep prompts around 600 English words or fewer when possible. Spell out in-image text verbatim.
 - `--aspect-ratio`: `1:1` (default), `4:3`, `3:4`, `16:9`, `9:16`, `2:3`, `3:2`, or `21:9`.
-- `--quality`: `basic` (default, 1K, $0.05/image) or `high` (2K, $0.10/image).
+- `--resolution`: `1K` or `2K` (default `2K`). Price per image: t2i 1K $0.05, 2K $0.10; i2i 1K $0.06, 2K $0.10. The deprecated `--quality basic|high` alias still maps to `1K`/`2K` but prints a warning; do not use it in new prompts.
 - `--output-format`: `png` (default) or `jpeg`.
 - `--storage`: optional HiAPI task storage tier, `temp` or `persistent`. Persistent requests can fall back to temporary storage; inspect the task detail for the actual tier. The CLI also downloads completed outputs to `outputs/` by default.
 
@@ -51,7 +51,7 @@ node scripts/hiapi-seedream-5-pro.mjs \
   --prompt "Turn this rainy night street into a sunny morning while keeping the layout and sign text unchanged" \
   --input-url https://example.com/street.jpg \
   --aspect-ratio 16:9 \
-  --quality high
+  --resolution 2K
 ```
 
 - Repeat `--input-url` or pass comma-separated values for 1-10 reference URLs.
@@ -87,7 +87,7 @@ node scripts/check-config.mjs --live
 
 ## Output
 
-The CLI prints JSON with `taskId`, `quality`, the resolved aspect ratio, and `outputs`. Completed files are saved under `outputs/` unless `--output-dir` or `--no-save` is used. See `references/output.md`.
+The CLI prints JSON with `taskId`, `resolution`, the resolved aspect ratio, and `outputs`. Completed files are saved under `outputs/` unless `--output-dir` or `--no-save` is used. See `references/output.md`.
 
 ## Error Guidance
 

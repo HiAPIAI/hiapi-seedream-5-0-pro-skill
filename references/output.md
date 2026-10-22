@@ -45,7 +45,7 @@ CLI result example:
   "model": "seedream-5.0-pro/text-to-image",
   "taskId": "task_123",
   "aspectRatio": "16:9",
-  "quality": "basic",
+  "resolution": "1K",
   "outputs": [
     {
       "kind": "file",

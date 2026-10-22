@@ -13,7 +13,7 @@ Important links:
 
 Install `hiapi-seedream-5-0-pro`, a text-to-image and image-to-image skill for Seedream 5.0 Pro through HiAPI.
 
-Version `0.2.0` uses `quality: basic|high`. The former `resolution` field and `match_input_image` aspect ratio are incompatible with the current API.
+Version `0.2.1` sends the required `resolution: 1K|2K` field. `quality`, `match_input_image`, and `auto` are rejected by the current API; `--quality basic|high` remains only as a deprecated CLI alias for `1K`/`2K`.
 
 ## Requirements
 
@@ -52,7 +52,7 @@ node scripts/check-config.mjs
 node scripts/hiapi-seedream-5-pro.mjs \
   --prompt "Create a 16:9 launch poster for an AI writing app" \
   --aspect-ratio 16:9 \
-  --quality basic
+  --resolution 1K
 ```
 
 Image-to-image:
@@ -63,7 +63,7 @@ node scripts/hiapi-seedream-5-pro.mjs \
   --prompt "Restyle this product photo as a premium studio ad" \
   --input-url "https://example.com/product.jpg" \
   --aspect-ratio 16:9 \
-  --quality high
+  --resolution 2K
 ```
 
 Production callback:
@@ -81,7 +81,7 @@ Supported models are `seedream-5.0-pro/text-to-image` and `seedream-5.0-pro/imag
 
 1. Read `SKILL.md`.
 2. Ensure `HIAPI_API_KEY` is configured.
-3. Run `scripts/hiapi-seedream-5-pro.mjs` with `--quality basic` or `--quality high`.
+3. Run `scripts/hiapi-seedream-5-pro.mjs` with `--resolution 1K` or `--resolution 2K`; use `--dry-run` to inspect the payload without a paid task.
 4. Return real generated file paths or remote URLs only.
 5. For production services, prefer a final callback and make processing idempotent by `taskId`. If the user configured a Webhook signing key in HiAPI account settings, verify the timestamp/HMAC signature against the raw body and reject timestamps outside a 5-minute window; unsigned callbacks have no signature headers.
 6. On task failure, return the HTTP or task error and do not blindly retry an unchanged invalid request.

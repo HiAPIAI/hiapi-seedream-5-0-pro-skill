@@ -14,8 +14,8 @@ export const SKILL_FOLDER = 'hiapi-seedream-5-0-pro';
 export const LEGACY_SKILL_FOLDERS = ['hiapi-seedream-5-pro'];
 export const REPO_URL = 'https://github.com/HiAPIAI/hiapi-seedream-5-0-pro-skill.git';
 const DISPLAY_NAME = 'HiAPI Seedream 5.0 Pro Skill';
-const MODEL_PAGE = 'https://www.hiapi.ai/en/models/seedream-5.0-pro-text-to-image?utm_source=skill&utm_medium=agent&utm_campaign=hiapi-seedream-5-0-pro';
-const API_KEY_PAGE = 'https://www.hiapi.ai/en/dashboard/api-keys?utm_source=skill&utm_medium=agent&utm_campaign=hiapi-seedream-5-0-pro';
+const MODEL_PAGE = 'https://www.hiapi.ai/en/models/seedream-5.0-pro-text-to-image';
+const API_KEY_PAGE = 'https://www.hiapi.ai/en/dashboard/api-keys';
 
 const argList = argv.slice(2);
 const yes = argList.includes('-y') || argList.includes('--yes') || !stdin.isTTY;

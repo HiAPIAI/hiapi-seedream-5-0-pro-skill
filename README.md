@@ -2,13 +2,13 @@
 
 Add Seedream 5.0 Pro image generation to your AI Agent.
 
-**Seedream 5.0 Pro • Install • API Key • [HiAPI](https://www.hiapi.ai)**
+**Seedream 5.0 Pro • Install • API Key • [HiAPI](https://www.hiapi.ai/en?utm_source=github&utm_medium=readme&utm_campaign=hiapi-seedream-5-0-pro)**
 
-[Get API Key](https://www.hiapi.ai/en/register) · [Pricing](https://www.hiapi.ai/en/pricing) · [HiAPI Docs](https://docs.hiapi.ai) · [All HiAPI Skills](https://github.com/HiAPIAI/hiapi-skills)
+[Get API Key](https://www.hiapi.ai/en/register?utm_source=github&utm_medium=readme&utm_campaign=hiapi-seedream-5-0-pro) · [Pricing](https://www.hiapi.ai/en/pricing?utm_source=github&utm_medium=readme&utm_campaign=hiapi-seedream-5-0-pro) · [HiAPI Docs](https://docs.hiapi.ai?utm_source=github&utm_medium=readme&utm_campaign=hiapi-seedream-5-0-pro) · [All HiAPI Skills](https://github.com/HiAPIAI/hiapi-skills)
 
 Languages: [English](README.md) | [简体中文](README.zh-CN.md)
 
-> **HiAPI Matrix:** 🎨 [Image Prompts](https://github.com/HiAPIAI/hiapi-skills) · 🎬 [Video Prompts](https://github.com/HiAPIAI/awesome-ai-video-prompts) · 🛠️ **Agent Skills (you are here)** · 🤖 [Remote MCP](https://docs.hiapi.ai/for-ai/) · 📖 [API Docs](https://docs.hiapi.ai)
+> **HiAPI Matrix:** 🎨 [Image Prompts](https://github.com/HiAPIAI/hiapi-skills) · 🎬 [Video Prompts](https://github.com/HiAPIAI/awesome-ai-video-prompts) · 🛠️ **Agent Skills (you are here)** · 🤖 [Remote MCP](https://docs.hiapi.ai/for-ai/?utm_source=github&utm_medium=readme&utm_campaign=hiapi-seedream-5-0-pro) · 📖 [API Docs](https://docs.hiapi.ai?utm_source=github&utm_medium=readme&utm_campaign=hiapi-seedream-5-0-pro)
 
 ---
 
@@ -83,7 +83,7 @@ Install the HiAPI Seedream 5.0 Pro image generation skill:
 
 1. Run: npx -y github:HiAPIAI/hiapi-seedream-5-0-pro-skill -y
    (auto-detects Codex / Claude Code skill directories)
-2. Set the HIAPI_API_KEY environment variable from https://www.hiapi.ai/en/dashboard/api-keys
+2. Set the HIAPI_API_KEY environment variable from https://www.hiapi.ai/en/dashboard/api-keys?utm_source=github&utm_medium=readme&utm_campaign=hiapi-seedream-5-0-pro
 3. Read SKILL.md for usage
 ```
 
@@ -91,7 +91,7 @@ Install the HiAPI Seedream 5.0 Pro image generation skill:
 
 ## Get API Key
 
-1. Open [Get API Key](https://www.hiapi.ai/en/register)
+1. Open [Get API Key](https://www.hiapi.ai/en/register?utm_source=github&utm_medium=readme&utm_campaign=hiapi-seedream-5-0-pro)
 2. Sign in or create a HiAPI account
 3. Create a new API Key
 4. Set the environment variable in the terminal that runs your agent:
@@ -215,9 +215,9 @@ Both success and fail can trigger the final callback. Make your handler idempote
 
 | Problem | Solution |
 | --- | --- |
-| `HIAPI_API_KEY is required` | Create a Key at [Get API Key](https://www.hiapi.ai/en/register), then set `HIAPI_API_KEY`. |
+| `HIAPI_API_KEY is required` | Create a Key at [Get API Key](https://www.hiapi.ai/en/register?utm_source=github&utm_medium=readme&utm_campaign=hiapi-seedream-5-0-pro), then set `HIAPI_API_KEY`. |
 | `401 Unauthorized` | Check whether the API Key is correct, or generate a new Key. |
-| `402 Payment Required` / insufficient balance | Open the [HiAPI Dashboard](https://www.hiapi.ai/en/dashboard) and check your account status. |
+| `402 Payment Required` / insufficient balance | Open the [HiAPI Dashboard](https://www.hiapi.ai/en/dashboard?utm_source=github&utm_medium=readme&utm_campaign=hiapi-seedream-5-0-pro) and check your account status. |
 | `429 Too Many Requests` | Wait and retry, or reduce concurrent generation requests. |
 | Content blocked | The prompt triggered a safety policy. Revise the description. |
 | No image output | Check the task response; this skill expects an image URL or data URI in `data.output[]` after the task succeeds. |
@@ -247,4 +247,4 @@ MIT
 
 ---
 
-[HiAPI](https://www.hiapi.ai) — One API, all AI models
+[HiAPI](https://www.hiapi.ai/en?utm_source=github&utm_medium=readme&utm_campaign=hiapi-seedream-5-0-pro) — One API, all AI models

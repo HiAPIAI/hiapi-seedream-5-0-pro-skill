@@ -81,6 +81,6 @@ Text-to-image must not receive `image_urls`. Image-to-image requires 1-10 refere
 
 ## Account Links
 
-- API key: https://www.hiapi.ai/en/register
-- Dashboard: https://www.hiapi.ai/en/dashboard
-- Pricing: https://www.hiapi.ai/en/pricing
+- API key: https://www.hiapi.ai/en/register?utm_source=skill&utm_medium=agent&utm_campaign=hiapi-seedream-5-0-pro
+- Dashboard: https://www.hiapi.ai/en/dashboard?utm_source=skill&utm_medium=agent&utm_campaign=hiapi-seedream-5-0-pro
+- Pricing: https://www.hiapi.ai/en/pricing?utm_source=skill&utm_medium=agent&utm_campaign=hiapi-seedream-5-0-pro

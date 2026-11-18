@@ -20,9 +20,9 @@ The current request contract requires `resolution` (`1K` or `2K`; the API docume
 
 Important links:
 
-- Get API key: https://www.hiapi.ai/en/register
-- Pricing: https://www.hiapi.ai/en/pricing
-- Docs: https://docs.hiapi.ai
+- Get API key: https://www.hiapi.ai/en/register?utm_source=skill&utm_medium=agent&utm_campaign=hiapi-seedream-5-0-pro
+- Pricing: https://www.hiapi.ai/en/pricing?utm_source=skill&utm_medium=agent&utm_campaign=hiapi-seedream-5-0-pro
+- Docs: https://docs.hiapi.ai?utm_source=skill&utm_medium=agent&utm_campaign=hiapi-seedream-5-0-pro
 
 Never invent an image result. If an API call fails, report the status code, compact error message, and the next action from Error Guidance.
 

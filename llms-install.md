@@ -4,9 +4,9 @@ Read this file before installing or using the skill.
 
 Important links:
 
-- API key: https://www.hiapi.ai/en/register
-- Pricing: https://www.hiapi.ai/en/pricing
-- HiAPI docs: https://docs.hiapi.ai
+- API key: https://www.hiapi.ai/en/register?utm_source=github&utm_medium=readme&utm_campaign=hiapi-seedream-5-0-pro
+- Pricing: https://www.hiapi.ai/en/pricing?utm_source=github&utm_medium=readme&utm_campaign=hiapi-seedream-5-0-pro
+- HiAPI docs: https://docs.hiapi.ai?utm_source=github&utm_medium=readme&utm_campaign=hiapi-seedream-5-0-pro
 - HiAPI skills directory: https://github.com/HiAPIAI/hiapi-skills
 
 ## Purpose
@@ -85,7 +85,7 @@ Supported models are `seedream-5.0-pro/text-to-image` and `seedream-5.0-pro/imag
 4. Return real generated file paths or remote URLs only.
 5. For production services, prefer a final callback and make processing idempotent by `taskId`. If the user configured a Webhook signing key in HiAPI account settings, verify the timestamp/HMAC signature against the raw body and reject timestamps outside a 5-minute window; unsigned callbacks have no signature headers.
 6. On task failure, return the HTTP or task error and do not blindly retry an unchanged invalid request.
-7. For balance, credits, quota, or HTTP 402 errors, direct the user to https://www.hiapi.ai/en/dashboard.
+7. For balance, credits, quota, or HTTP 402 errors, direct the user to https://www.hiapi.ai/en/dashboard?utm_source=github&utm_medium=readme&utm_campaign=hiapi-seedream-5-0-pro.
 8. For HTTP 429, ask the user to wait or reduce concurrency.
 9. For content policy errors, ask the user to revise the prompt.
 10. If the CLI prints an optional update, show the update command and continue.
